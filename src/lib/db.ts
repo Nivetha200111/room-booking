@@ -1,5 +1,5 @@
 import type { Booking, Inbox, ReleaseAction, ReleaseKind, User } from '../types'
-import { useApi, POLL_MS } from './config'
+import { useApi } from './config'
 
 /**
  * Data layer. Uses the /api serverless functions (Neon Postgres) when
@@ -39,6 +39,19 @@ export async function fetchBookings(): Promise<Booking[]> {
   return readLocal()
 }
 
+/** Combined board state (bookings + inbox) in a single request to keep load low. */
+export async function fetchState(
+  employeeId: string | null,
+): Promise<{ bookings: Booking[]; inbox: Inbox }> {
+  if (useApi) {
+    const q = employeeId ? `?employeeId=${encodeURIComponent(employeeId)}` : ''
+    return api<{ bookings: Booking[]; inbox: Inbox }>(`state${q}`)
+  }
+  const bookings = readLocal()
+  const inbox = employeeId ? await fetchInbox(employeeId) : { requests: [], notices: [] }
+  return { bookings, inbox }
+}
+
 export async function createBooking(draft: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> {
   if (useApi) {
     return api<Booking>('bookings', { method: 'POST', body: JSON.stringify(draft) })
@@ -54,24 +67,6 @@ export async function deleteBooking(id: string): Promise<void> {
     return
   }
   writeLocal(readLocal().filter((b) => b.id !== id))
-}
-
-/** subscribe to changes; returns an unsubscribe fn */
-export function subscribe(onChange: () => void): () => void {
-  if (useApi) {
-    // Neon has no realtime — poll for other users' changes while the tab is visible.
-    const tick = () => {
-      if (!document.hidden) onChange()
-    }
-    const t = setInterval(tick, POLL_MS)
-    return () => clearInterval(t)
-  }
-  // local: react to changes from other tabs
-  const handler = (e: StorageEvent) => {
-    if (e.key === BOOKINGS_KEY) onChange()
-  }
-  window.addEventListener('storage', handler)
-  return () => window.removeEventListener('storage', handler)
 }
 
 // ---------- release actions (request release / release now) ----------

@@ -6,7 +6,7 @@ import { ROOMS } from './rooms'
 import { activeBooking } from './lib/bookings'
 import { useApi } from './lib/config'
 import { requestRelease, releaseNow, resolveRequest } from './lib/db'
-import { useBookings, useInbox, useNow } from './hooks/useBookings'
+import { useBoard, useNow } from './hooks/useBookings'
 import { useAuth } from './auth/AuthContext'
 import { Login } from './components/Login'
 import { RoomCard } from './components/RoomCard'
@@ -28,8 +28,7 @@ export default function App() {
 
 function Board() {
   const { user, signOut } = useAuth()
-  const { bookings, add, remove, reload } = useBookings()
-  const { inbox, reload: reloadInbox } = useInbox(user)
+  const { bookings, inbox, add, remove, reload } = useBoard(user)
   const now = useNow()
   const [booking, setBooking] = useState<{ room: Room; start?: Date } | null>(null)
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null)
@@ -74,8 +73,7 @@ function Board() {
 
   const onResolve = async (actionId: string, decision: 'approve' | 'decline') => {
     await resolveRequest(actionId, decision, user!)
-    reloadInbox()
-    if (decision === 'approve') reload()
+    reload()
     flash(decision === 'approve' ? 'Request approved — room freed' : 'Request declined')
   }
 

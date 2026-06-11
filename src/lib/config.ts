@@ -6,5 +6,8 @@
  */
 export const useApi = import.meta.env.VITE_USE_API === 'true'
 
-/** how often to re-poll the shared board for other people's changes */
-export const POLL_MS = 4000
+/** how often to re-poll the shared board (when the tab is active & visible) */
+export const POLL_MS = 20000
+
+/** pause polling after this much inactivity; resume + refresh on the next interaction */
+export const IDLE_MS = 2 * 60 * 1000
