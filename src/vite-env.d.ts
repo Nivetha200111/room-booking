@@ -1,8 +1,8 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_SUPABASE_URL?: string
-  readonly VITE_SUPABASE_ANON_KEY?: string
+  /** 'true' to use the /api (Neon Postgres) backend; otherwise local-only */
+  readonly VITE_USE_API?: string
 }
 
 interface ImportMeta {

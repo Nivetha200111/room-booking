@@ -4,7 +4,7 @@ import { BookOpen, Check, LogOut, Cloud, CloudOff } from 'lucide-react'
 import type { Booking, Room } from './types'
 import { ROOMS } from './rooms'
 import { activeBooking } from './lib/bookings'
-import { isSupabaseConfigured } from './lib/supabase'
+import { useApi } from './lib/config'
 import { useBookings, useNow } from './hooks/useBookings'
 import { useAuth } from './auth/AuthContext'
 import { Login } from './components/Login'
@@ -57,11 +57,11 @@ function Board() {
 
           <div className="flex items-center gap-2">
             <span
-              title={isSupabaseConfigured ? 'Shared (Supabase)' : 'Local only — connect Supabase to share'}
+              title={useApi ? 'Shared — Neon Postgres' : 'Local only — connect Neon to share across the team'}
               className="hidden items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[12px] text-phantom-20 sm:flex"
             >
-              {isSupabaseConfigured ? <Cloud size={12} className="text-keen" /> : <CloudOff size={12} />}
-              {isSupabaseConfigured ? 'Shared' : 'Local'}
+              {useApi ? <Cloud size={12} className="text-keen" /> : <CloudOff size={12} />}
+              {useApi ? 'Shared' : 'Local'}
             </span>
             <button
               onClick={() => setPolicyOpen(true)}

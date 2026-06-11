@@ -1,100 +1,56 @@
 import type { Booking, User } from '../types'
-import { supabase, isSupabaseConfigured } from './supabase'
+import { useApi, POLL_MS } from './config'
 
 /**
- * Data layer. Uses Supabase when configured (shared, realtime), otherwise
- * falls back to localStorage so the app still runs locally with no backend.
+ * Data layer. Uses the /api serverless functions (Neon Postgres) when
+ * VITE_USE_API is enabled, otherwise falls back to localStorage so the app
+ * still runs locally with no backend.
  */
 
 const BOOKINGS_KEY = 'keenstack.bookings.v2'
 
-// ---------- shared helpers ----------
-
-type Row = {
-  id: string
-  room_id: string
-  employee_id: string
-  organizer: string
-  agenda: string
-  purpose: string
-  attendees: number
-  start_ts: string
-  end_ts: string
-  created_at: string
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`/api/${path}`, {
+    headers: { 'content-type': 'application/json' },
+    ...init,
+  })
+  if (!res.ok) {
+    const msg = await res.text().catch(() => '')
+    throw new Error(msg || `Request failed (${res.status})`)
+  }
+  if (res.status === 204) return undefined as T
+  return res.json() as Promise<T>
 }
-
-const fromRow = (r: Row): Booking => ({
-  id: r.id,
-  roomId: r.room_id,
-  employeeId: r.employee_id,
-  organizer: r.organizer,
-  agenda: r.agenda,
-  purpose: r.purpose as Booking['purpose'],
-  attendees: r.attendees,
-  start: r.start_ts,
-  end: r.end_ts,
-  createdAt: r.created_at,
-})
-
-const toRow = (b: Booking): Row => ({
-  id: b.id,
-  room_id: b.roomId,
-  employee_id: b.employeeId,
-  organizer: b.organizer,
-  agenda: b.agenda,
-  purpose: b.purpose,
-  attendees: b.attendees,
-  start_ts: b.start,
-  end_ts: b.end,
-  created_at: b.createdAt,
-})
 
 // ---------- auth (lightweight, no passwords) ----------
 
 export async function signIn(employeeId: string, name: string): Promise<User> {
-  const id = employeeId.trim()
-  const cleanName = name.trim()
-  if (isSupabaseConfigured && supabase) {
-    await supabase
-      .from('employees')
-      .upsert({ employee_id: id, name: cleanName }, { onConflict: 'employee_id' })
+  const user: User = { employeeId: employeeId.trim(), name: name.trim() }
+  if (useApi) {
+    await api('employees', { method: 'POST', body: JSON.stringify(user) })
   }
-  return { employeeId: id, name: cleanName }
+  return user
 }
 
 // ---------- bookings ----------
 
 export async function fetchBookings(): Promise<Booking[]> {
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from('bookings').select('*').order('start_ts')
-    if (error) throw error
-    return (data as Row[]).map(fromRow)
-  }
+  if (useApi) return api<Booking[]>('bookings')
   return readLocal()
 }
 
-export async function createBooking(
-  draft: Omit<Booking, 'id' | 'createdAt'>,
-): Promise<Booking> {
-  const booking: Booking = {
-    ...draft,
-    id: crypto.randomUUID(),
-    createdAt: new Date().toISOString(),
+export async function createBooking(draft: Omit<Booking, 'id' | 'createdAt'>): Promise<Booking> {
+  if (useApi) {
+    return api<Booking>('bookings', { method: 'POST', body: JSON.stringify(draft) })
   }
-  if (isSupabaseConfigured && supabase) {
-    const { data, error } = await supabase.from('bookings').insert(toRow(booking)).select().single()
-    if (error) throw error
-    return fromRow(data as Row)
-  }
-  const all = readLocal()
-  writeLocal([...all, booking])
+  const booking: Booking = { ...draft, id: crypto.randomUUID(), createdAt: new Date().toISOString() }
+  writeLocal([...readLocal(), booking])
   return booking
 }
 
 export async function deleteBooking(id: string): Promise<void> {
-  if (isSupabaseConfigured && supabase) {
-    const { error } = await supabase.from('bookings').delete().eq('id', id)
-    if (error) throw error
+  if (useApi) {
+    await api(`bookings?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
     return
   }
   writeLocal(readLocal().filter((b) => b.id !== id))
@@ -102,15 +58,13 @@ export async function deleteBooking(id: string): Promise<void> {
 
 /** subscribe to changes; returns an unsubscribe fn */
 export function subscribe(onChange: () => void): () => void {
-  if (isSupabaseConfigured && supabase) {
-    const client = supabase
-    const channel = client
-      .channel('bookings-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, onChange)
-      .subscribe()
-    return () => {
-      client.removeChannel(channel)
+  if (useApi) {
+    // Neon has no realtime — poll for other users' changes while the tab is visible.
+    const tick = () => {
+      if (!document.hidden) onChange()
     }
+    const t = setInterval(tick, POLL_MS)
+    return () => clearInterval(t)
   }
   // local: react to changes from other tabs
   const handler = (e: StorageEvent) => {
