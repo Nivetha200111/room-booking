@@ -14,9 +14,11 @@ import { BookingModal } from './components/BookingModal'
 import { CancelDialog } from './components/CancelDialog'
 import { Notifications } from './components/Notifications'
 import { Timeline, UpcomingList } from './components/Timeline'
+import { WeekView } from './components/WeekView'
 import { PolicyDrawer } from './components/PolicyDrawer'
 
 type FloorFilter = 'all' | 1 | 2
+type ScheduleView = 'today' | 'week'
 
 export default function App() {
   const { user } = useAuth()
@@ -29,10 +31,11 @@ function Board() {
   const { bookings, add, remove, reload } = useBookings()
   const { inbox, reload: reloadInbox } = useInbox(user)
   const now = useNow()
-  const [booking, setBooking] = useState<Room | null>(null)
+  const [booking, setBooking] = useState<{ room: Room; start?: Date } | null>(null)
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null)
   const [policyOpen, setPolicyOpen] = useState(false)
   const [floor, setFloor] = useState<FloorFilter>('all')
+  const [scheduleView, setScheduleView] = useState<ScheduleView>('today')
   const [toast, setToast] = useState<string | null>(null)
 
   const bookable = ROOMS.filter((r) => !r.restricted)
@@ -154,23 +157,58 @@ function Board() {
               room={room}
               bookings={bookings}
               now={now}
-              onBook={setBooking}
+              onBook={(room) => setBooking({ room })}
               onCancel={setCancelTarget}
             />
           ))}
         </motion.div>
 
         {/* schedule */}
-        <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <div className="lg:col-span-2">
-            <Timeline bookings={bookings} now={now} onCancel={setCancelTarget} />
+        <div className="mt-8 mb-3 flex items-center justify-between">
+          <h2 className="font-display text-lg font-semibold text-polar">Schedule</h2>
+          <div className="flex items-center gap-1 rounded-xl border border-line p-0.5">
+            {([
+              ['today', 'Today'],
+              ['week', 'Week'],
+            ] as [ScheduleView, string][]).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => setScheduleView(val)}
+                className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ease-ks ${
+                  scheduleView === val ? 'bg-keen text-phantom' : 'text-phantom-20 hover:text-polar'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-          <UpcomingList bookings={bookings} now={now} onCancel={setCancelTarget} />
         </div>
+
+        {scheduleView === 'today' ? (
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <Timeline bookings={bookings} now={now} onCancel={setCancelTarget} />
+            </div>
+            <UpcomingList bookings={bookings} now={now} onCancel={setCancelTarget} />
+          </div>
+        ) : (
+          <WeekView
+            bookings={bookings}
+            now={now}
+            onCancel={setCancelTarget}
+            onBookSlot={(room, start) => setBooking({ room, start })}
+          />
+        )}
       </main>
 
       {booking && (
-        <BookingModal room={booking} bookings={bookings} onClose={() => setBooking(null)} onConfirm={onConfirm} />
+        <BookingModal
+          room={booking.room}
+          bookings={bookings}
+          initialStart={booking.start}
+          onClose={() => setBooking(null)}
+          onConfirm={onConfirm}
+        />
       )}
       {cancelTarget && (
         <CancelDialog

@@ -19,11 +19,13 @@ function toLocalInput(d: Date) {
 export function BookingModal({
   room,
   bookings,
+  initialStart,
   onClose,
   onConfirm,
 }: {
   room: Room
   bookings: Booking[]
+  initialStart?: Date
   onClose: () => void
   onConfirm: (b: Omit<Booking, 'id' | 'createdAt'>) => void
 }) {
@@ -31,8 +33,10 @@ export function BookingModal({
   const [agenda, setAgenda] = useState('')
   const [purpose, setPurpose] = useState<Purpose>('Project meeting')
   const [attendees, setAttendees] = useState(2)
-  const [start, setStart] = useState(() => toLocalInput(roundedNow()))
-  const [end, setEnd] = useState(() => toLocalInput(roundedNow(30)))
+  const [start, setStart] = useState(() => toLocalInput(initialStart ?? roundedNow()))
+  const [end, setEnd] = useState(() =>
+    toLocalInput(initialStart ? new Date(initialStart.getTime() + 30 * 60000) : roundedNow(30)),
+  )
 
   const draft = useMemo(
     () => ({
