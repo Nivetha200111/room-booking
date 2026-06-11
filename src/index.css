@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* KeenStack brand fonts — Sora (display), self-hosted. Open Sans via Google Fonts. */
+@font-face { font-family: 'Sora'; src: url('/fonts/Sora-Light.ttf') format('truetype');    font-weight: 300; font-display: swap; }
+@font-face { font-family: 'Sora'; src: url('/fonts/Sora-Regular.ttf') format('truetype');  font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Sora'; src: url('/fonts/Sora-Medium.ttf') format('truetype');   font-weight: 500; font-display: swap; }
+@font-face { font-family: 'Sora'; src: url('/fonts/Sora-SemiBold.ttf') format('truetype'); font-weight: 600; font-display: swap; }
+@font-face { font-family: 'Sora'; src: url('/fonts/Sora-Bold.ttf') format('truetype');     font-weight: 700; font-display: swap; }
+
+:root {
+  color-scheme: dark;
+  /* Brand palette (KeenStack Brand Guidelines v1) */
+  --ks-phantom: #112245;
+  --ks-polar: #ecf2f7;
+  --ks-keen: #20c9a0;
+  --ks-code-blue: #153ca8;
+
+  /* dark-mode surfaces (Phantom tonal) */
+  --bg: #0d1b38;       /* canvas — a touch deeper than Phantom */
+  --panel: #112245;    /* Phantom */
+  --panel-2: #16294f;  /* elevated */
+  --line: rgba(236, 242, 247, 0.1);
+  --line-strong: rgba(236, 242, 247, 0.18);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ks-polar);
+  font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(236, 242, 247, 0.16);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 242, 247, 0.28);
+  background-clip: content-box;
+}
+
+/* Brand surface treatment — flat, cool, hair-thin border (no gradients) */
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.panel-hover {
+  transition: border-color var(--ks-dur, 220ms) cubic-bezier(0.22, 0.61, 0.36, 1),
+    background-color 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.panel-hover:hover {
+  border-color: var(--line-strong);
+  background: var(--panel-2);
+}
+
+/* subtle brand ripple texture, very low contrast (per brand: never full opacity) */
+.ripple-faint {
+  position: relative;
+}
+.ripple-faint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/brand/ripple-tile-dark.png');
+  background-size: cover;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+input::-webkit-calendar-picker-indicator {
+  filter: invert(0.85);
+  cursor: pointer;
+}

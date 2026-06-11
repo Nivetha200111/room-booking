@@ -1,0 +1,10 @@
+node_modules
+dist
+dev.log
+*.local
+.env
+.env.*
+!.env.example
+tsconfig.tsbuildinfo
+.claude/settings.local.json
+.DS_Store

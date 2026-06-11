@@ -1,0 +1,149 @@
+import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { BookOpen, Check, LogOut, Cloud, CloudOff } from 'lucide-react'
+import type { Booking, Room } from './types'
+import { ROOMS } from './rooms'
+import { activeBooking } from './lib/bookings'
+import { isSupabaseConfigured } from './lib/supabase'
+import { useBookings, useNow } from './hooks/useBookings'
+import { useAuth } from './auth/AuthContext'
+import { Login } from './components/Login'
+import { RoomCard } from './components/RoomCard'
+import { BookingModal } from './components/BookingModal'
+import { Timeline, UpcomingList } from './components/Timeline'
+import { PolicyDrawer } from './components/PolicyDrawer'
+
+type FloorFilter = 'all' | 1 | 2
+
+export default function App() {
+  const { user } = useAuth()
+  if (!user) return <Login />
+  return <Board />
+}
+
+function Board() {
+  const { user, signOut } = useAuth()
+  const { bookings, add, remove } = useBookings()
+  const now = useNow()
+  const [booking, setBooking] = useState<Room | null>(null)
+  const [policyOpen, setPolicyOpen] = useState(false)
+  const [floor, setFloor] = useState<FloorFilter>('all')
+  const [toast, setToast] = useState<string | null>(null)
+
+  const bookable = ROOMS.filter((r) => !r.restricted)
+  const freeCount = bookable.filter((r) => !activeBooking(r.id, bookings, now)).length
+  const rooms = useMemo(() => ROOMS.filter((r) => floor === 'all' || r.floor === floor), [floor])
+
+  const onConfirm = async (b: Omit<Booking, 'id' | 'createdAt'>) => {
+    await add(b)
+    setBooking(null)
+    setToast(`Booked ${ROOMS.find((r) => r.id === b.roomId)?.name}`)
+    setTimeout(() => setToast(null), 2600)
+  }
+
+  const initials = user!.name
+    .split(' ')
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+
+  return (
+    <div className="min-h-screen">
+      {/* top bar */}
+      <header className="sticky top-0 z-30 border-b border-line bg-phantom/85 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+          <img src="/brand/logo-primary.png" alt="KeenStack" className="h-6 w-auto" />
+
+          <div className="flex items-center gap-2">
+            <span
+              title={isSupabaseConfigured ? 'Shared (Supabase)' : 'Local only — connect Supabase to share'}
+              className="hidden items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[12px] text-phantom-20 sm:flex"
+            >
+              {isSupabaseConfigured ? <Cloud size={12} className="text-keen" /> : <CloudOff size={12} />}
+              {isSupabaseConfigured ? 'Shared' : 'Local'}
+            </span>
+            <button
+              onClick={() => setPolicyOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold text-phantom-20 transition ease-ks hover:border-line-strong hover:text-polar"
+            >
+              <BookOpen size={14} /> Policy
+            </button>
+            <div className="flex items-center gap-2 rounded-lg border border-line py-1 pl-1 pr-2">
+              <span className="flex h-6 w-6 items-center justify-center rounded bg-keen text-[10px] font-bold text-phantom">
+                {initials}
+              </span>
+              <span className="hidden text-[13px] text-phantom-20 sm:block">{user!.name}</span>
+              <button onClick={signOut} title="Sign out" className="text-phantom-40 transition hover:text-danger">
+                <LogOut size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        {/* heading row */}
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-3xl font-light tracking-tight text-polar">Rooms</h1>
+            <p className="mt-1 text-sm text-phantom-40">
+              <span className="font-semibold text-keen">{freeCount}</span> of {bookable.length} available right now
+            </p>
+          </div>
+          <div className="flex items-center gap-1 rounded-xl border border-line p-0.5">
+            {([
+              ['all', 'All'],
+              [1, 'Floor 1'],
+              [2, 'Floor 2'],
+            ] as [FloorFilter, string][]).map(([val, label]) => (
+              <button
+                key={String(val)}
+                onClick={() => setFloor(val)}
+                className={`rounded-lg px-3 py-1.5 text-[13px] font-semibold transition ease-ks ${
+                  floor === val ? 'bg-keen text-phantom' : 'text-phantom-20 hover:text-polar'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* room grid */}
+        <motion.div layout className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {rooms.map((room) => (
+            <RoomCard key={room.id} room={room} bookings={bookings} now={now} onBook={setBooking} />
+          ))}
+        </motion.div>
+
+        {/* schedule */}
+        <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <Timeline bookings={bookings} now={now} onRemove={remove} />
+          </div>
+          <UpcomingList bookings={bookings} now={now} onRemove={remove} />
+        </div>
+      </main>
+
+      {booking && (
+        <BookingModal room={booking} bookings={bookings} onClose={() => setBooking(null)} onConfirm={onConfirm} />
+      )}
+      <PolicyDrawer open={policyOpen} onClose={() => setPolicyOpen(false)} />
+
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ ease: [0.22, 0.61, 0.36, 1] }}
+            className="fixed bottom-6 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-lg border border-line-strong bg-panel px-4 py-2.5 text-sm font-semibold text-polar shadow-ks-lg"
+          >
+            <Check size={15} className="text-keen" /> {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
