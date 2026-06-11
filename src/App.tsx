@@ -5,11 +5,14 @@ import type { Booking, Room } from './types'
 import { ROOMS } from './rooms'
 import { activeBooking } from './lib/bookings'
 import { useApi } from './lib/config'
-import { useBookings, useNow } from './hooks/useBookings'
+import { requestRelease, releaseNow, resolveRequest } from './lib/db'
+import { useBookings, useInbox, useNow } from './hooks/useBookings'
 import { useAuth } from './auth/AuthContext'
 import { Login } from './components/Login'
 import { RoomCard } from './components/RoomCard'
 import { BookingModal } from './components/BookingModal'
+import { CancelDialog } from './components/CancelDialog'
+import { Notifications } from './components/Notifications'
 import { Timeline, UpcomingList } from './components/Timeline'
 import { PolicyDrawer } from './components/PolicyDrawer'
 
@@ -23,9 +26,11 @@ export default function App() {
 
 function Board() {
   const { user, signOut } = useAuth()
-  const { bookings, add, remove } = useBookings()
+  const { bookings, add, remove, reload } = useBookings()
+  const { inbox, reload: reloadInbox } = useInbox(user)
   const now = useNow()
   const [booking, setBooking] = useState<Room | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<Booking | null>(null)
   const [policyOpen, setPolicyOpen] = useState(false)
   const [floor, setFloor] = useState<FloorFilter>('all')
   const [toast, setToast] = useState<string | null>(null)
@@ -34,11 +39,41 @@ function Board() {
   const freeCount = bookable.filter((r) => !activeBooking(r.id, bookings, now)).length
   const rooms = useMemo(() => ROOMS.filter((r) => floor === 'all' || r.floor === floor), [floor])
 
+  const flash = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2600)
+  }
+
   const onConfirm = async (b: Omit<Booking, 'id' | 'createdAt'>) => {
     await add(b)
     setBooking(null)
-    setToast(`Booked ${ROOMS.find((r) => r.id === b.roomId)?.name}`)
-    setTimeout(() => setToast(null), 2600)
+    flash(`Booked ${ROOMS.find((r) => r.id === b.roomId)?.name}`)
+  }
+
+  const cancelOwn = async (b: Booking) => {
+    await remove(b.id)
+    setCancelTarget(null)
+    flash('Booking cancelled')
+  }
+
+  const doRequestRelease = async (b: Booking, reason: string) => {
+    await requestRelease(b, user!, reason)
+    setCancelTarget(null)
+    flash(`Release requested from ${b.organizer}`)
+  }
+
+  const doReleaseNow = async (b: Booking, reason: string) => {
+    await releaseNow(b, user!, reason)
+    setCancelTarget(null)
+    reload()
+    flash(`${ROOMS.find((r) => r.id === b.roomId)?.name} released`)
+  }
+
+  const onResolve = async (actionId: string, decision: 'approve' | 'decline') => {
+    await resolveRequest(actionId, decision, user!)
+    reloadInbox()
+    if (decision === 'approve') reload()
+    flash(decision === 'approve' ? 'Request approved — room freed' : 'Request declined')
   }
 
   const initials = user!.name
@@ -63,6 +98,7 @@ function Board() {
               {useApi ? <Cloud size={12} className="text-keen" /> : <CloudOff size={12} />}
               {useApi ? 'Shared' : 'Local'}
             </span>
+            <Notifications inbox={inbox} onResolve={onResolve} />
             <button
               onClick={() => setPolicyOpen(true)}
               className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold text-phantom-20 transition ease-ks hover:border-line-strong hover:text-polar"
@@ -113,21 +149,38 @@ function Board() {
         {/* room grid */}
         <motion.div layout className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {rooms.map((room) => (
-            <RoomCard key={room.id} room={room} bookings={bookings} now={now} onBook={setBooking} />
+            <RoomCard
+              key={room.id}
+              room={room}
+              bookings={bookings}
+              now={now}
+              onBook={setBooking}
+              onCancel={setCancelTarget}
+            />
           ))}
         </motion.div>
 
         {/* schedule */}
         <div className="mt-6 grid grid-cols-1 gap-3 lg:grid-cols-3">
           <div className="lg:col-span-2">
-            <Timeline bookings={bookings} now={now} onRemove={remove} />
+            <Timeline bookings={bookings} now={now} onCancel={setCancelTarget} />
           </div>
-          <UpcomingList bookings={bookings} now={now} onRemove={remove} />
+          <UpcomingList bookings={bookings} now={now} onCancel={setCancelTarget} />
         </div>
       </main>
 
       {booking && (
         <BookingModal room={booking} bookings={bookings} onClose={() => setBooking(null)} onConfirm={onConfirm} />
+      )}
+      {cancelTarget && (
+        <CancelDialog
+          booking={cancelTarget}
+          isOwner={cancelTarget.employeeId === user!.employeeId}
+          onClose={() => setCancelTarget(null)}
+          onCancelOwn={() => cancelOwn(cancelTarget)}
+          onRequestRelease={(reason) => doRequestRelease(cancelTarget, reason)}
+          onReleaseNow={(reason) => doReleaseNow(cancelTarget, reason)}
+        />
       )}
       <PolicyDrawer open={policyOpen} onClose={() => setPolicyOpen(false)} />
 

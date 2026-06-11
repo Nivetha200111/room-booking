@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Booking } from '../types'
-import { createBooking, deleteBooking, fetchBookings, subscribe } from '../lib/db'
+import type { Booking, Inbox, User } from '../types'
+import { createBooking, deleteBooking, fetchBookings, fetchInbox, subscribe } from '../lib/db'
 
 export function useBookings() {
   const [bookings, setBookings] = useState<Booking[]>([])
@@ -31,7 +31,30 @@ export function useBookings() {
     await deleteBooking(id)
   }, [])
 
-  return { bookings, add, remove, loading, error }
+  return { bookings, add, remove, reload, loading, error }
+}
+
+/** Owner inbox — pending release requests + release notices. Polls via subscribe(). */
+export function useInbox(user: User | null) {
+  const [inbox, setInbox] = useState<Inbox>({ requests: [], notices: [] })
+
+  const reload = useCallback(() => {
+    if (!user) {
+      setInbox({ requests: [], notices: [] })
+      return
+    }
+    fetchInbox(user.employeeId)
+      .then(setInbox)
+      .catch(() => {})
+  }, [user?.employeeId])
+
+  useEffect(() => {
+    reload()
+    const unsub = subscribe(reload)
+    return unsub
+  }, [reload])
+
+  return { inbox, reload }
 }
 
 /** ticking clock so "now" indicators stay live */

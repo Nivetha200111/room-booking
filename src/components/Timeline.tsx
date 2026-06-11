@@ -13,11 +13,11 @@ const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 export function Timeline({
   bookings,
   now,
-  onRemove,
+  onCancel,
 }: {
   bookings: Booking[]
   now: Date
-  onRemove: (id: string) => void
+  onCancel: (booking: Booking) => void
 }) {
   const rooms = ROOMS.filter((r) => !r.restricted)
   const todays = bookings.filter((b) => isSameDay(new Date(b.start), now))
@@ -82,9 +82,9 @@ export function Timeline({
                     >
                       <span className="truncate">{b.agenda}</span>
                       <button
-                        onClick={() => onRemove(b.id)}
+                        onClick={() => onCancel(b)}
                         className="ml-auto hidden shrink-0 rounded p-0.5 hover:bg-phantom/20 group-hover:block"
-                        title="Cancel booking"
+                        title="Cancel or release"
                       >
                         <Trash2 size={10} />
                       </button>
@@ -103,11 +103,11 @@ export function Timeline({
 export function UpcomingList({
   bookings,
   now,
-  onRemove,
+  onCancel,
 }: {
   bookings: Booking[]
   now: Date
-  onRemove: (id: string) => void
+  onCancel: (booking: Booking) => void
 }) {
   const upcoming = bookings
     .filter((b) => new Date(b.end) >= now)
@@ -146,9 +146,9 @@ export function UpcomingList({
                   </p>
                 </div>
                 <button
-                  onClick={() => onRemove(b.id)}
+                  onClick={() => onCancel(b)}
                   className="rounded-md p-1.5 text-phantom-60 opacity-0 transition hover:bg-phantom-80 hover:text-danger group-hover:opacity-100"
-                  title="Cancel"
+                  title="Cancel or release"
                 >
                   <Trash2 size={14} />
                 </button>

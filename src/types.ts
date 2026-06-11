@@ -35,3 +35,32 @@ export type Purpose =
   | 'Client meeting'
   | 'Project discussion'
   | 'One-on-one'
+
+export type ReleaseKind = 'request' | 'release'
+export type ReleaseStatus = 'pending' | 'approved' | 'declined' | 'done'
+
+export interface ReleaseAction {
+  id: string
+  bookingId: string
+  roomId: string
+  agenda: string
+  /** ISO strings */
+  start: string
+  end: string
+  ownerId: string
+  ownerName: string
+  actorId: string
+  actorName: string
+  reason: string
+  kind: ReleaseKind
+  status: ReleaseStatus
+  createdAt: string
+  resolvedAt: string | null
+}
+
+export interface Inbox {
+  /** pending release requests addressed to the current user (the owner) */
+  requests: ReleaseAction[]
+  /** "your booking was released by X" notices for the current user */
+  notices: ReleaseAction[]
+}

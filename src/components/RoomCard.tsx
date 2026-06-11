@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Users, Lock, Tv, Cable, Projector, Phone, PenLine } from 'lucide-react'
+import { Users, Lock, Tv, Cable, Projector, Phone, PenLine, Trash2 } from 'lucide-react'
 import type { Booking, Room } from '../types'
 import { activeBooking, nextBooking, fmtTime } from '../lib/bookings'
 
@@ -16,11 +16,13 @@ export function RoomCard({
   bookings,
   now,
   onBook,
+  onCancel,
 }: {
   room: Room
   bookings: Booking[]
   now: Date
   onBook: (room: Room) => void
+  onCancel: (booking: Booking) => void
 }) {
   const active = activeBooking(room.id, bookings, now)
   const next = nextBooking(room.id, bookings, now)
@@ -69,11 +71,20 @@ export function RoomCard({
             {room.restrictedNote}
           </p>
         ) : active ? (
-          <div className="rounded-lg border border-line bg-phantom-90 px-3 py-2">
-            <p className="truncate font-semibold text-polar">{active.agenda}</p>
-            <p className="text-[13px] text-phantom-40">
-              {active.organizer} · until {fmtTime(active.end)}
-            </p>
+          <div className="flex items-start gap-2 rounded-lg border border-line bg-phantom-90 px-3 py-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold text-polar">{active.agenda}</p>
+              <p className="text-[13px] text-phantom-40">
+                {active.organizer} · until {fmtTime(active.end)}
+              </p>
+            </div>
+            <button
+              onClick={() => onCancel(active)}
+              title="Cancel or release"
+              className="shrink-0 rounded-md p-1 text-phantom-60 transition hover:bg-phantom-80 hover:text-danger"
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
         ) : next ? (
           <p className="text-phantom-20">
