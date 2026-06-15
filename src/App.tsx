@@ -47,9 +47,15 @@ function Board() {
   }
 
   const onConfirm = async (b: Omit<Booking, 'id' | 'createdAt'>) => {
-    await add(b)
-    setBooking(null)
-    flash(`Booked ${ROOMS.find((r) => r.id === b.roomId)?.name}`)
+    try {
+      await add(b)
+      setBooking(null)
+      flash(`Booked ${ROOMS.find((r) => r.id === b.roomId)?.name}`)
+    } catch {
+      // someone grabbed the slot first — refresh so the modal shows the clash
+      reload()
+      flash('That slot was just taken — please pick another time or room.')
+    }
   }
 
   const cancelOwn = async (b: Booking) => {

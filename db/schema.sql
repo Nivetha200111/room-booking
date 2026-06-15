@@ -24,6 +24,19 @@ create table if not exists bookings (
 
 create index if not exists bookings_room_start_idx on bookings (room_id, start_ts);
 
+-- Airtight no-double-booking guard: the DB itself rejects any two bookings in
+-- the same room whose time ranges overlap (range bounds are [start, end) so
+-- back-to-back slots like 9-10 and 10-11 are fine). Idempotent.
+create extension if not exists btree_gist;
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'bookings_no_overlap') then
+    alter table bookings
+      add constraint bookings_no_overlap
+      exclude using gist (room_id with =, tstzrange(start_ts, end_ts) with &&);
+  end if;
+end $$;
+
 -- Release actions — audit log + inbox for "request release" / "release now".
 -- Booking fields are snapshotted so the record survives the booking being deleted.
 create table if not exists release_actions (

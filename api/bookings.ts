@@ -46,13 +46,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!b.roomId || !b.agenda || !b.start || !b.end || !b.employeeId) {
         return res.status(400).json({ error: 'Missing required booking fields.' })
       }
-      const rows = (await sql`
-        insert into bookings (room_id, employee_id, organizer, agenda, purpose, attendees, start_ts, end_ts)
-        values (${b.roomId}, ${b.employeeId}, ${b.organizer ?? ''}, ${b.agenda}, ${b.purpose ?? ''},
-                ${Number(b.attendees) || 1}, ${b.start}, ${b.end})
-        returning id, room_id, employee_id, organizer, agenda, purpose, attendees, start_ts, end_ts, created_at
-      `) as Row[]
-      return res.status(201).json(toBooking(rows[0]))
+
+      // Overlap guard (fast path): reject if the room already has a clashing slot.
+      const clash = (await sql`
+        select id from bookings
+        where room_id = ${b.roomId}
+          and tstzrange(start_ts, end_ts) && tstzrange(${b.start}::timestamptz, ${b.end}::timestamptz)
+        limit 1
+      `) as { id: string }[]
+      if (clash.length) {
+        return res.status(409).json({ error: 'This room is already booked for an overlapping time slot.' })
+      }
+
+      try {
+        const rows = (await sql`
+          insert into bookings (room_id, employee_id, organizer, agenda, purpose, attendees, start_ts, end_ts)
+          values (${b.roomId}, ${b.employeeId}, ${b.organizer ?? ''}, ${b.agenda}, ${b.purpose ?? ''},
+                  ${Number(b.attendees) || 1}, ${b.start}, ${b.end})
+          returning id, room_id, employee_id, organizer, agenda, purpose, attendees, start_ts, end_ts, created_at
+        `) as Row[]
+        return res.status(201).json(toBooking(rows[0]))
+      } catch (err) {
+        // Airtight path: the exclusion constraint rejected a concurrent overlap.
+        const code = (err as { code?: string })?.code
+        const msg = err instanceof Error ? err.message : ''
+        if (code === '23P01' || /bookings_no_overlap|exclusion/i.test(msg)) {
+          return res.status(409).json({ error: 'This room was just booked for an overlapping time slot.' })
+        }
+        throw err
+      }
     }
 
     if (req.method === 'DELETE') {
