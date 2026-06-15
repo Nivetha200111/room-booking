@@ -17,10 +17,14 @@ create table if not exists bookings (
   agenda      text not null,
   purpose     text not null,
   attendees   integer not null default 1,
+  attendee_names jsonb not null default '[]'::jsonb,
   start_ts    timestamptz not null,
   end_ts      timestamptz not null,
   created_at  timestamptz not null default now()
 );
+
+-- For existing databases (idempotent; the API also self-heals this on first use).
+alter table bookings add column if not exists attendee_names jsonb not null default '[]'::jsonb;
 
 create index if not exists bookings_room_start_idx on bookings (room_id, start_ts);
 

@@ -33,6 +33,25 @@ export function BookingModal({
   const [agenda, setAgenda] = useState('')
   const [purpose, setPurpose] = useState<Purpose>('Project meeting')
   const [attendees, setAttendees] = useState(2)
+  const [attendeeNames, setAttendeeNames] = useState<string[]>([])
+  const [nameInput, setNameInput] = useState('')
+
+  const attendeeCount = attendeeNames.length > 0 ? attendeeNames.length : attendees
+
+  const addNames = (raw: string) => {
+    const parts = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+    if (!parts.length) return
+    setAttendeeNames((prev) => {
+      const next = [...prev]
+      for (const p of parts) if (!next.some((n) => n.toLowerCase() === p.toLowerCase())) next.push(p)
+      return next
+    })
+    setNameInput('')
+  }
+  const removeName = (i: number) => setAttendeeNames((prev) => prev.filter((_, idx) => idx !== i))
   const [start, setStart] = useState(() => toLocalInput(initialStart ?? roundedNow()))
   const [end, setEnd] = useState(() =>
     toLocalInput(initialStart ? new Date(initialStart.getTime() + 30 * 60000) : roundedNow(30)),
@@ -42,11 +61,11 @@ export function BookingModal({
     () => ({
       roomId: room.id,
       agenda,
-      attendees,
+      attendees: attendeeCount,
       start: start ? new Date(start).toISOString() : '',
       end: end ? new Date(end).toISOString() : '',
     }),
-    [room.id, agenda, attendees, start, end],
+    [room.id, agenda, attendeeCount, start, end],
   )
 
   const result = useMemo(() => validateBooking(draft, bookings), [draft, bookings])
@@ -58,7 +77,19 @@ export function BookingModal({
 
   const submit = () => {
     if (!result.ok || !user) return
-    onConfirm({ ...draft, purpose, organizer: user.name, employeeId: user.employeeId })
+    // include any half-typed name still in the input
+    const pending = nameInput.trim()
+    const finalNames = pending && !attendeeNames.some((n) => n.toLowerCase() === pending.toLowerCase())
+      ? [...attendeeNames, pending]
+      : attendeeNames
+    onConfirm({
+      ...draft,
+      attendees: finalNames.length > 0 ? finalNames.length : attendees,
+      attendeeNames: finalNames,
+      purpose,
+      organizer: user.name,
+      employeeId: user.employeeId,
+    })
   }
 
   return (
@@ -115,12 +146,41 @@ export function BookingModal({
                 <input
                   type="number"
                   min={1}
-                  value={attendees}
+                  value={attendeeCount}
+                  disabled={attendeeNames.length > 0}
                   onChange={(e) => setAttendees(Number(e.target.value))}
-                  className={input}
+                  className={`${input} disabled:opacity-60`}
                 />
               </Field>
             </div>
+
+            <Field label="Attendee Names">
+              <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-line bg-phantom-90 px-2 py-1.5 focus-within:border-codeblue focus-within:ring-2 focus-within:ring-codeblue/40">
+                {attendeeNames.map((n, i) => (
+                  <span key={n} className="flex items-center gap-1 rounded bg-phantom-80 px-2 py-0.5 text-[13px] text-polar">
+                    {n}
+                    <button onClick={() => removeName(i)} className="text-phantom-40 transition hover:text-danger">
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      addNames(nameInput)
+                    } else if (e.key === 'Backspace' && !nameInput && attendeeNames.length) {
+                      removeName(attendeeNames.length - 1)
+                    }
+                  }}
+                  onBlur={() => addNames(nameInput)}
+                  placeholder={attendeeNames.length ? 'Add another…' : 'e.g. Asim, Hemanth, Priya'}
+                  className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm text-polar placeholder-phantom-60 outline-none"
+                />
+              </div>
+            </Field>
 
             <div className="grid grid-cols-2 gap-3">
               <Field label="Start">

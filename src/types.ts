@@ -24,6 +24,8 @@ export interface Booking {
   agenda: string
   purpose: Purpose
   attendees: number
+  /** optional list of attendee names */
+  attendeeNames: string[]
   /** ISO strings */
   start: string
   end: string

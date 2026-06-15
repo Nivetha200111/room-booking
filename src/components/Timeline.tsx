@@ -76,7 +76,7 @@ export function Timeline({
                       key={b.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      title={`${b.agenda} · ${b.organizer} · ${fmtTime(b.start)}–${fmtTime(b.end)}`}
+                      title={`${b.agenda} · ${b.organizer} · ${fmtTime(b.start)}–${fmtTime(b.end)}${b.attendeeNames?.length ? `\nAttendees: ${b.attendeeNames.join(', ')}` : ''}`}
                       className="group absolute top-1 flex h-6 items-center gap-1 rounded bg-keen px-1.5 text-[10px] font-semibold text-phantom"
                       style={{ left: `${left}%`, width: `${width}%` }}
                     >
@@ -144,6 +144,9 @@ export function UpcomingList({
                   <p className="truncate text-[13px] text-phantom-40">
                     {room.name} · {b.organizer} · {fmtTime(b.start)}–{fmtTime(b.end)}
                   </p>
+                  {b.attendeeNames?.length > 0 && (
+                    <p className="truncate text-[12px] text-phantom-60">with {b.attendeeNames.join(', ')}</p>
+                  )}
                 </div>
                 <button
                   onClick={() => onCancel(b)}

@@ -11,12 +11,14 @@ type Row = {
   agenda: string
   purpose: string
   attendees: number
+  attendee_names: unknown
   start_ts: string | Date
   end_ts: string | Date
   created_at: string | Date
 }
 
 const iso = (v: string | Date) => new Date(v).toISOString()
+const names = (v: unknown): string[] => (Array.isArray(v) ? (v as string[]) : [])
 
 const toBooking = (r: Row) => ({
   id: r.id,
@@ -26,16 +28,28 @@ const toBooking = (r: Row) => ({
   agenda: r.agenda,
   purpose: r.purpose,
   attendees: Number(r.attendees),
+  attendeeNames: names(r.attendee_names),
   start: iso(r.start_ts),
   end: iso(r.end_ts),
   createdAt: iso(r.created_at),
 })
 
+// Lazily ensure the attendee_names column exists (cached per warm instance) so a
+// deploy never breaks production while waiting on a manual migration.
+let schemaReady = false
+async function ensureSchema() {
+  if (schemaReady) return
+  await sql`alter table bookings add column if not exists attendee_names jsonb not null default '[]'::jsonb`
+  schemaReady = true
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
+    await ensureSchema()
+
     if (req.method === 'GET') {
       const rows = (await sql`
-        select id, room_id, employee_id, organizer, agenda, purpose, attendees, start_ts, end_ts, created_at
+        select id, room_id, employee_id, organizer, agenda, purpose, attendees, attendee_names, start_ts, end_ts, created_at
         from bookings order by start_ts
       `) as Row[]
       return res.status(200).json(rows.map(toBooking))
@@ -58,12 +72,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(409).json({ error: 'This room is already booked for an overlapping time slot.' })
       }
 
+      const attendeeNames = JSON.stringify(Array.isArray(b.attendeeNames) ? b.attendeeNames : [])
       try {
         const rows = (await sql`
-          insert into bookings (room_id, employee_id, organizer, agenda, purpose, attendees, start_ts, end_ts)
+          insert into bookings (room_id, employee_id, organizer, agenda, purpose, attendees, attendee_names, start_ts, end_ts)
           values (${b.roomId}, ${b.employeeId}, ${b.organizer ?? ''}, ${b.agenda}, ${b.purpose ?? ''},
-                  ${Number(b.attendees) || 1}, ${b.start}, ${b.end})
-          returning id, room_id, employee_id, organizer, agenda, purpose, attendees, start_ts, end_ts, created_at
+                  ${Number(b.attendees) || 1}, ${attendeeNames}::jsonb, ${b.start}, ${b.end})
+          returning id, room_id, employee_id, organizer, agenda, purpose, attendees, attendee_names, start_ts, end_ts, created_at
         `) as Row[]
         return res.status(201).json(toBooking(rows[0]))
       } catch (err) {

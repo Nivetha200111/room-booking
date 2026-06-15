@@ -63,6 +63,11 @@ export function CancelDialog({
               <p className="text-[13px] text-phantom-40">
                 {booking.agenda} · {booking.organizer} · {fmtTime(booking.start)}–{fmtTime(booking.end)}
               </p>
+              {booking.attendeeNames?.length > 0 && (
+                <p className="mt-1 text-[13px] text-phantom-20">
+                  <span className="text-phantom-40">Attendees:</span> {booking.attendeeNames.join(', ')}
+                </p>
+              )}
             </div>
             <button onClick={onClose} className="rounded-md p-1.5 text-phantom-40 transition hover:bg-phantom-90 hover:text-polar">
               <X size={18} />

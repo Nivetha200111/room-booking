@@ -97,7 +97,7 @@ export function WeekView({
                             e.stopPropagation()
                             onCancel(b)
                           }}
-                          title={`${b.agenda} · ${b.organizer} · ${fmtTime(b.start)}–${fmtTime(b.end)}`}
+                          title={`${b.agenda} · ${b.organizer} · ${fmtTime(b.start)}–${fmtTime(b.end)}${b.attendeeNames?.length ? `\nAttendees: ${b.attendeeNames.join(', ')}` : ''}`}
                           className="block truncate rounded bg-keen px-1 py-0.5 text-[10px] font-semibold text-phantom"
                         >
                           {fmtTime(b.start)} {b.agenda}
