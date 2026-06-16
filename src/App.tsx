@@ -9,7 +9,7 @@ import { requestRelease, releaseNow, resolveRequest } from './lib/db'
 import { useBoard, useNow } from './hooks/useBookings'
 import { useAuth } from './auth/AuthContext'
 import { Login } from './components/Login'
-import { RoomCard } from './components/RoomCard'
+import { FloorMap } from './components/FloorMap'
 import { BookingModal } from './components/BookingModal'
 import { CancelDialog } from './components/CancelDialog'
 import { AdminPanel } from './components/AdminPanel'
@@ -168,19 +168,16 @@ function Board() {
           </div>
         </div>
 
-        {/* room grid */}
-        <motion.div layout className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {rooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-              bookings={bookings}
-              now={now}
-              onBook={(room) => setBooking({ room })}
-              onCancel={setCancelTarget}
-            />
-          ))}
-        </motion.div>
+        {/* floor map */}
+        <div className="mt-6">
+          <FloorMap
+            rooms={rooms}
+            bookings={bookings}
+            now={now}
+            onBook={(room) => setBooking({ room })}
+            onCancel={setCancelTarget}
+          />
+        </div>
 
         {/* schedule */}
         <div className="mt-8 mb-3 flex items-center justify-between">
