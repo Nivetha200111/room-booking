@@ -176,7 +176,7 @@ export function BookingModal({
                     }
                   }}
                   onBlur={() => addNames(nameInput)}
-                  placeholder={attendeeNames.length ? 'Add another…' : 'e.g. Asim, Hemanth, Priya'}
+                  placeholder={attendeeNames.length ? 'Add another' : 'Add a name and press Enter'}
                   className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm text-polar placeholder-phantom-60 outline-none"
                 />
               </div>
