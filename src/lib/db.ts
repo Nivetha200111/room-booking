@@ -1,4 +1,4 @@
-import type { Booking, Inbox, ReleaseAction, ReleaseKind, Role, User } from '../types'
+import type { Booking, EmployeeRow, Inbox, ReleaseAction, ReleaseKind, Role, User } from '../types'
 import { useApi } from './config'
 import { validateEmployeeId } from './employee'
 
@@ -61,6 +61,17 @@ export async function signIn(employeeId: string, name: string): Promise<User> {
   emps[id] = { name: cleanName, role }
   writeEmployees(emps)
   return { employeeId: id, name: cleanName, role }
+}
+
+/** Admin-only: list all registered employees. */
+export async function fetchEmployees(adminId: string): Promise<EmployeeRow[]> {
+  if (useApi) {
+    return api<EmployeeRow[]>(`employees?adminId=${encodeURIComponent(adminId)}`)
+  }
+  const emps = readEmployees()
+  return Object.entries(emps)
+    .map(([employeeId, v]) => ({ employeeId, name: v.name, role: v.role }))
+    .sort((a, b) => a.employeeId.localeCompare(b.employeeId))
 }
 
 function localAdminIds(): string[] {

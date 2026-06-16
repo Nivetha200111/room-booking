@@ -12,6 +12,7 @@ import { Login } from './components/Login'
 import { RoomCard } from './components/RoomCard'
 import { BookingModal } from './components/BookingModal'
 import { CancelDialog } from './components/CancelDialog'
+import { AdminPanel } from './components/AdminPanel'
 import { Notifications } from './components/Notifications'
 import { Timeline, UpcomingList } from './components/Timeline'
 import { WeekView } from './components/WeekView'
@@ -33,6 +34,7 @@ function Board() {
   const [booking, setBooking] = useState<{ room: Room; start?: Date } | null>(null)
   const [cancelTarget, setCancelTarget] = useState<Booking | null>(null)
   const [policyOpen, setPolicyOpen] = useState(false)
+  const [adminOpen, setAdminOpen] = useState(false)
   const [floor, setFloor] = useState<FloorFilter>('all')
   const [scheduleView, setScheduleView] = useState<ScheduleView>('today')
   const [toast, setToast] = useState<string | null>(null)
@@ -106,6 +108,14 @@ function Board() {
               {useApi ? 'Shared' : 'Local'}
             </span>
             <Notifications inbox={inbox} onResolve={onResolve} />
+            {user!.role === 'admin' && (
+              <button
+                onClick={() => setAdminOpen(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-codeblue/40 bg-codeblue/10 px-2.5 py-1.5 text-[13px] font-semibold text-codeblue transition ease-ks hover:bg-codeblue/20"
+              >
+                <ShieldCheck size={14} /> Admin
+              </button>
+            )}
             <button
               onClick={() => setPolicyOpen(true)}
               className="flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-[13px] font-semibold text-phantom-20 transition ease-ks hover:border-line-strong hover:text-polar"
@@ -231,6 +241,9 @@ function Board() {
         />
       )}
       <PolicyDrawer open={policyOpen} onClose={() => setPolicyOpen(false)} />
+      {adminOpen && user!.role === 'admin' && (
+        <AdminPanel bookings={bookings} user={user!} onClose={() => setAdminOpen(false)} />
+      )}
 
       <AnimatePresence>
         {toast && (

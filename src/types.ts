@@ -63,6 +63,13 @@ export interface ReleaseAction {
   resolvedAt: string | null
 }
 
+export interface EmployeeRow {
+  employeeId: string
+  name: string
+  role: Role
+  createdAt?: string
+}
+
 export interface Inbox {
   /** pending release requests addressed to the current user (the owner) */
   requests: ReleaseAction[]
