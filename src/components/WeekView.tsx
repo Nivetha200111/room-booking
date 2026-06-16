@@ -83,12 +83,22 @@ export function WeekView({
                     .sort((a, b) => +new Date(a.start) - +new Date(b.start))
                   const slot = new Date(d)
                   slot.setHours(9, 0, 0, 0)
+                  const isTodayCol = sameDay(d, now)
+                  // heatmap: free = faint green, busier = deeper amber glow
+                  const heat = cell.length
+                  const cellBg =
+                    heat === 0
+                      ? 'rgba(32, 201, 160, 0.06)'
+                      : `rgba(232, 168, 56, ${Math.min(0.32, 0.12 + heat * 0.08)})`
                   return (
                     <button
                       key={d.toISOString()}
                       onClick={() => onBookSlot(room, slot)}
                       title={`Book ${room.name}`}
-                      className="group relative min-h-[3.25rem] space-y-0.5 rounded-md border border-line bg-phantom-90/40 p-1 text-left align-top transition hover:border-keen/40"
+                      style={{ backgroundColor: cellBg }}
+                      className={`group relative min-h-[3.25rem] space-y-0.5 rounded-md border p-1 text-left align-top transition hover:brightness-125 ${
+                        isTodayCol ? 'border-keen/40' : 'border-line'
+                      }`}
                     >
                       {cell.map((b) => (
                         <span
@@ -98,7 +108,7 @@ export function WeekView({
                             onCancel(b)
                           }}
                           title={`${b.agenda} · ${b.organizer} · ${fmtTime(b.start)}–${fmtTime(b.end)}${b.attendeeNames?.length ? `\nAttendees: ${b.attendeeNames.join(', ')}` : ''}`}
-                          className="block truncate rounded bg-keen px-1 py-0.5 text-[10px] font-semibold text-phantom"
+                          className="block truncate rounded bg-keen px-1 py-0.5 text-[10px] font-semibold text-phantom shadow-sm"
                         >
                           {fmtTime(b.start)} {b.agenda}
                         </span>
@@ -118,9 +128,15 @@ export function WeekView({
         </div>
       </div>
 
-      <p className="mt-3 text-[12px] text-phantom-40">
-        Click an empty cell to book · click a booking to cancel or release.
-      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-phantom-40">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: 'rgba(32,201,160,0.25)' }} /> Free
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: 'rgba(232,168,56,0.45)' }} /> Booked (brighter = busier)
+        </span>
+        <span className="text-phantom-60">Click a cell to book · click a booking to manage it.</span>
+      </div>
     </div>
   )
 }

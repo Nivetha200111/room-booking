@@ -29,9 +29,9 @@ export function RoomCard({
   const status = room.restricted ? 'restricted' : active ? 'busy' : 'free'
 
   const statusMeta = {
-    free: { label: 'Available', color: '#20c9a0' },
-    busy: { label: 'In Use', color: '#e8a838' },
-    restricted: { label: 'Restricted', color: '#8c98b0' },
+    free: { label: 'Available', color: '#20c9a0', lit: 'lit-free' },
+    busy: { label: 'In Use', color: '#e8a838', lit: 'lit-busy' },
+    restricted: { label: 'Restricted', color: '#8c98b0', lit: 'lit-restricted' },
   }[status]
 
   return (
@@ -40,7 +40,7 @@ export function RoomCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-      className="panel panel-hover flex flex-col rounded-card p-5"
+      className={`panel panel-hover flex flex-col rounded-card p-5 ${statusMeta.lit}`}
     >
       {/* header */}
       <div className="flex items-start justify-between">
@@ -49,9 +49,12 @@ export function RoomCard({
           <p className="mt-0.5 text-[13px] text-phantom-40">Floor {room.floor}</p>
         </div>
 
-        <div className="flex items-center gap-1.5 text-[12px] font-semibold" style={{ color: statusMeta.color }}>
+        <div
+          className="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide"
+          style={{ color: statusMeta.color, backgroundColor: `${statusMeta.color}1f` }}
+        >
           <span className="relative flex h-1.5 w-1.5">
-            {status === 'busy' && (
+            {status !== 'restricted' && (
               <span
                 className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
                 style={{ backgroundColor: statusMeta.color }}
