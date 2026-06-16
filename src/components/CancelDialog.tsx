@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Send, Zap, AlertTriangle, Clock } from 'lucide-react'
+import { X, Send, Zap, AlertTriangle, Clock, ShieldAlert } from 'lucide-react'
 import type { Booking } from '../types'
 import { getRoom } from '../rooms'
 import { fmtTime } from '../lib/bookings'
@@ -10,6 +10,7 @@ type Choice = 'request' | 'release'
 export function CancelDialog({
   booking,
   isOwner,
+  isAdmin = false,
   onClose,
   onCancelOwn,
   onRequestRelease,
@@ -17,6 +18,7 @@ export function CancelDialog({
 }: {
   booking: Booking
   isOwner: boolean
+  isAdmin?: boolean
   onClose: () => void
   onCancelOwn: () => void
   onRequestRelease: (reason: string) => void
@@ -27,12 +29,16 @@ export function CancelDialog({
   const [choice, setChoice] = useState<Choice>('request')
   const [reason, setReason] = useState('')
 
+  // admin can override anyone's booking directly (the owner is still notified)
+  const adminOverride = isAdmin && !isOwner && !ended
+
   const reasonOk = choice === 'request' || reason.trim().length > 0
-  const canConfirm = isOwner || (!ended && reasonOk)
+  const canConfirm = isOwner || adminOverride || (!ended && reasonOk)
 
   const confirm = () => {
     if (isOwner) return onCancelOwn()
     if (ended) return
+    if (adminOverride) return onReleaseNow(reason.trim() || 'Cancelled by an administrator')
     if (choice === 'request') onRequestRelease(reason)
     else if (reason.trim()) onReleaseNow(reason)
   }
@@ -84,6 +90,23 @@ export function CancelDialog({
                 <Clock size={15} className="mt-0.5 shrink-0 text-phantom-40" />
                 This meeting has already ended — there's nothing to release.
               </p>
+            ) : adminOverride ? (
+              <>
+                <p className="flex items-start gap-2 rounded-lg border border-codeblue/30 bg-codeblue/10 px-3 py-2.5 text-sm text-phantom-20">
+                  <ShieldAlert size={15} className="mt-0.5 shrink-0 text-codeblue" />
+                  As an admin you can cancel {booking.organizer}'s booking directly. They'll be notified.
+                </p>
+                <label className="block pt-1">
+                  <span className="mb-1.5 block text-[13px] font-semibold text-phantom-20">Reason (optional)</span>
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={2}
+                    placeholder="Add a note for the owner…"
+                    className="w-full resize-none rounded-lg border border-line bg-phantom-90 px-3 py-2 text-sm text-polar placeholder-phantom-60 outline-none transition focus:border-codeblue focus:ring-2 focus:ring-codeblue/40"
+                  />
+                </label>
+              </>
             ) : (
               <>
                 <OptionCard
@@ -139,12 +162,18 @@ export function CancelDialog({
                 onClick={confirm}
                 disabled={!canConfirm}
                 className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ease-ks disabled:cursor-not-allowed disabled:opacity-40 ${
-                  isOwner || choice === 'release'
+                  isOwner || adminOverride || choice === 'release'
                     ? 'bg-danger text-white enabled:hover:bg-danger/85'
                     : 'bg-keen text-phantom enabled:hover:bg-keen-dark'
                 }`}
               >
-                {isOwner ? 'Cancel Booking' : choice === 'release' ? 'Release Now' : 'Send Request'}
+                {isOwner
+                  ? 'Cancel Booking'
+                  : adminOverride
+                    ? 'Cancel as Admin'
+                    : choice === 'release'
+                      ? 'Release Now'
+                      : 'Send Request'}
               </button>
             )}
           </div>

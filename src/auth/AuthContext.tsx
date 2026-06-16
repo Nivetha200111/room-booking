@@ -20,7 +20,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(SESSION_KEY)
-      if (raw) setUser(JSON.parse(raw) as User)
+      if (raw) {
+        const u = JSON.parse(raw) as User
+        setUser({ ...u, role: u.role ?? 'employee' })
+      }
     } catch {
       /* ignore */
     }
@@ -36,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false)
     }
   }, [])
+  // signIn rejects on invalid ID / register-once conflict; callers handle it.
 
   const signOut = useCallback(() => {
     setUser(null)

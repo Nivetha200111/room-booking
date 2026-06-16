@@ -5,8 +5,12 @@
 create table if not exists employees (
   employee_id text primary key,
   name        text not null,
+  role        text not null default 'employee',
   created_at  timestamptz not null default now()
 );
+
+-- For existing databases (idempotent; the API also self-heals this on first use).
+alter table employees add column if not exists role text not null default 'employee';
 
 -- Bookings.
 create table if not exists bookings (

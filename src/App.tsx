@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { BookOpen, Check, LogOut, Cloud, CloudOff } from 'lucide-react'
+import { BookOpen, Check, LogOut, Cloud, CloudOff, ShieldCheck } from 'lucide-react'
 import type { Booking, Room } from './types'
 import { ROOMS } from './rooms'
 import { activeBooking } from './lib/bookings'
@@ -117,6 +117,11 @@ function Board() {
                 {initials}
               </span>
               <span className="hidden text-[13px] text-phantom-20 sm:block">{user!.name}</span>
+              {user!.role === 'admin' && (
+                <span className="flex items-center gap-1 rounded bg-codeblue/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-codeblue">
+                  <ShieldCheck size={11} /> Admin
+                </span>
+              )}
               <button onClick={signOut} title="Sign out" className="text-phantom-40 transition hover:text-danger">
                 <LogOut size={14} />
               </button>
@@ -218,6 +223,7 @@ function Board() {
         <CancelDialog
           booking={cancelTarget}
           isOwner={cancelTarget.employeeId === user!.employeeId}
+          isAdmin={user!.role === 'admin'}
           onClose={() => setCancelTarget(null)}
           onCancelOwn={() => cancelOwn(cancelTarget)}
           onRequestRelease={(reason) => doRequestRelease(cancelTarget, reason)}

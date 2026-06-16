@@ -11,9 +11,12 @@ export interface Room {
   restrictedNote?: string
 }
 
+export type Role = 'admin' | 'employee'
+
 export interface User {
   employeeId: string
   name: string
+  role: Role
 }
 
 export interface Booking {

@@ -93,6 +93,16 @@ Neon Postgres (database) + Vercel (hosting + `/api`). Full step-by-step in
 | `VITE_USE_API` | Vercel (build) | `true` to use the shared backend; unset = local-only. |
 | `CRON_SECRET` | Vercel (server, optional) | Authenticates the nightly cleanup cron. |
 | `RETENTION_DAYS` | Vercel (server, optional) | Days of history to keep (default `30`). |
+| `ADMIN_IDS` | Vercel (server, optional) | Comma-separated employee IDs granted the admin role (e.g. `KSIN0001,KSIN0005`). |
+| `MAX_EMPLOYEE_NO` | Vercel (server, optional) | Highest valid employee number (default `71`). Raise it as new staff join. |
+
+**Accounts & roles**
+
+- Sign-in IDs must match `KSIN####` and fall within `1..MAX_EMPLOYEE_NO` (currently `KSIN0001`
+  to `KSIN0071`). Each ID can be **registered once** — the name is bound on first sign-in, so
+  nobody can claim another person's ID.
+- **Admins** (listed in `ADMIN_IDS`) get an "Admin" badge and can cancel any booking directly
+  (the owner is still notified). Everyone else is a regular employee.
 
 **Database schema:** [`db/schema.sql`](db/schema.sql) — run once in the Neon SQL editor.
 It creates the tables, the no-overlap exclusion constraint, and the `attendee_names`

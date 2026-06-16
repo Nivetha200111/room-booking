@@ -1,5 +1,8 @@
-import type { Booking, Inbox, ReleaseAction, ReleaseKind, User } from '../types'
+import type { Booking, Inbox, ReleaseAction, ReleaseKind, Role, User } from '../types'
 import { useApi } from './config'
+import { validateEmployeeId } from './employee'
+
+const EMPLOYEES_KEY = 'keenstack.employees.v1'
 
 /**
  * Data layer. Uses the /api serverless functions (Neon Postgres) when
@@ -15,21 +18,69 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
   })
   if (!res.ok) {
-    const msg = await res.text().catch(() => '')
-    throw new Error(msg || `Request failed (${res.status})`)
+    let msg = `Request failed (${res.status})`
+    try {
+      const j = await res.json()
+      if (j?.error) msg = j.error
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg)
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
 // ---------- auth (lightweight, no passwords) ----------
+// Rules: ID must match KSIN#### within range; each ID can only be registered
+// once (the name is bound on first sign-in). Admins are designated by env.
 
 export async function signIn(employeeId: string, name: string): Promise<User> {
-  const user: User = { employeeId: employeeId.trim(), name: name.trim() }
+  const check = validateEmployeeId(employeeId)
+  if (!check.ok) throw new Error(check.error)
+  const id = check.id!
+  const cleanName = name.trim()
+  if (cleanName.length < 2) throw new Error('Please enter your full name.')
+
   if (useApi) {
-    await api('employees', { method: 'POST', body: JSON.stringify(user) })
+    return api<User>('employees', { method: 'POST', body: JSON.stringify({ employeeId: id, name: cleanName }) })
   }
-  return user
+
+  // local fallback: register-once + role via localStorage
+  const role: Role = localAdminIds().includes(id) ? 'admin' : 'employee'
+  const emps = readEmployees()
+  const existing = emps[id]
+  if (existing) {
+    if (existing.name.trim().toLowerCase() !== cleanName.toLowerCase()) {
+      throw new Error('This Employee ID is already registered to a different name.')
+    }
+    emps[id] = { name: existing.name, role }
+    writeEmployees(emps)
+    return { employeeId: id, name: existing.name, role }
+  }
+  emps[id] = { name: cleanName, role }
+  writeEmployees(emps)
+  return { employeeId: id, name: cleanName, role }
+}
+
+function localAdminIds(): string[] {
+  const env = (import.meta.env.VITE_ADMIN_IDS as string | undefined) ?? ''
+  const ls = (typeof localStorage !== 'undefined' && localStorage.getItem('keenstack.admin_ids')) || ''
+  return `${env},${ls}`
+    .split(',')
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean)
+}
+
+function readEmployees(): Record<string, { name: string; role: Role }> {
+  try {
+    return JSON.parse(localStorage.getItem(EMPLOYEES_KEY) || '{}')
+  } catch {
+    return {}
+  }
+}
+function writeEmployees(emps: Record<string, { name: string; role: Role }>) {
+  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(emps))
 }
 
 // ---------- bookings ----------

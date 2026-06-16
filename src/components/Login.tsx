@@ -1,17 +1,30 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { AlertTriangle, ArrowRight } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
+import { validateEmployeeId } from '../lib/employee'
 
 export function Login() {
   const { signIn, loading } = useAuth()
   const [employeeId, setEmployeeId] = useState('')
   const [name, setName] = useState('')
-  const valid = employeeId.trim().length >= 2 && name.trim().length >= 2
+  const [error, setError] = useState<string | null>(null)
 
-  const submit = (e: React.FormEvent) => {
+  const idCheck = validateEmployeeId(employeeId)
+  const valid = idCheck.ok && name.trim().length >= 2
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (valid && !loading) signIn(employeeId, name)
+    setError(null)
+    if (!valid || loading) {
+      if (!idCheck.ok && employeeId.trim()) setError(idCheck.error!)
+      return
+    }
+    try {
+      await signIn(employeeId, name)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not sign in.')
+    }
   }
 
   return (
@@ -35,14 +48,31 @@ export function Login() {
             <input
               autoFocus
               value={employeeId}
-              onChange={(e) => setEmployeeId(e.target.value)}
+              onChange={(e) => {
+                setEmployeeId(e.target.value)
+                setError(null)
+              }}
+              placeholder="KSIN____"
               className={input}
             />
           </label>
           <label className="block">
             <span className="mb-1.5 block text-[13px] font-semibold text-phantom-20">Full Name</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} className={input} />
+            <input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value)
+                setError(null)
+              }}
+              className={input}
+            />
           </label>
+
+          {error && (
+            <p className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] text-danger">
+              <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {error}
+            </p>
+          )}
 
           <button
             type="submit"
@@ -55,7 +85,8 @@ export function Login() {
         </form>
 
         <p className="mt-6 text-[13px] text-phantom-40">
-          No password needed. Your ID identifies your bookings to the team.
+          Use your KeenStack Employee ID (e.g. KSIN0042). No password needed. Each ID can be
+          registered once, so use your own.
         </p>
       </motion.div>
     </div>
