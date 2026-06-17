@@ -22,6 +22,45 @@ function Chairs({ n }: { n: number }) {
   )
 }
 
+/** A prominent door: open (swung into the room) when free, closed across the
+ *  doorway when booked/restricted. Hinged at the bottom-right of the wall. */
+function Door({ status }: { status: 'free' | 'busy' | 'restricted' }) {
+  const open = status === 'free'
+  const color = status === 'free' ? '#20c9a0' : status === 'busy' ? '#e8a838' : '#8c98b0'
+  const L = 54
+  return (
+    <div className="absolute bottom-[-6px] right-5 z-20" style={{ width: L, height: L }}>
+      {/* opening cut into the wall */}
+      <span className="absolute bottom-0 right-0 h-[6px] rounded-sm" style={{ width: L, background: 'var(--bg)' }} />
+      {/* door frame posts (jambs) at each side of the opening */}
+      <span className="absolute bottom-0 right-0 h-2.5 w-[5px] rounded-sm" style={{ background: color }} />
+      <span className="absolute bottom-0 left-0 h-2.5 w-[5px] rounded-sm" style={{ background: color }} />
+      {/* swing arc (shown when open) */}
+      <span
+        className="absolute bottom-0 right-0 rounded-tl-[100%] border-l-2 border-t-2 border-dashed transition-opacity duration-500"
+        style={{ width: L, height: L, borderColor: color, opacity: open ? 0.45 : 0 }}
+      />
+      {/* door leaf — a thick panel that swings open or sits shut across the doorway */}
+      <span
+        className="absolute bottom-0 right-0 origin-bottom-right transition-transform duration-[800ms] ease-out"
+        style={{
+          width: L - 5,
+          height: 10,
+          background: color,
+          borderRadius: 3,
+          boxShadow: open ? `0 0 16px -2px ${color}` : '0 2px 5px rgba(0,0,0,0.45)',
+          transform: open ? 'rotate(80deg)' : 'rotate(0deg)',
+        }}
+      >
+        {/* panel groove */}
+        <span className="absolute inset-x-2 top-1/2 h-px -translate-y-1/2" style={{ background: 'rgba(0,0,0,0.28)' }} />
+        {/* handle on the opening edge */}
+        <span className="absolute left-2 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-phantom" style={{ opacity: 0.6 }} />
+      </span>
+    </div>
+  )
+}
+
 function RoomTile({
   room,
   bookings,
@@ -113,15 +152,8 @@ function RoomTile({
         )}
       </div>
 
-      {/* door (swing arc + opening in the wall) */}
-      {!room.restricted && (
-        <>
-          <span className="absolute -bottom-[2px] left-6 h-[3px] w-7" style={{ background: 'var(--bg)' }} />
-          <svg className="absolute bottom-0 left-6 h-5 w-7" viewBox="0 0 28 20" fill="none" style={{ color: s.wall }}>
-            <path d="M0 20 A28 20 0 0 1 28 0" stroke="currentColor" strokeWidth="1.2" opacity="0.7" />
-          </svg>
-        </>
-      )}
+      {/* door — open when free, closed when booked */}
+      <Door status={status} />
     </motion.button>
   )
 }
