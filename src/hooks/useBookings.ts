@@ -75,7 +75,7 @@ export function useBoard(user: User | null) {
 }
 
 /** ticking clock so "now" indicators stay live */
-export function useNow(intervalMs = 30_000) {
+export function useNow(intervalMs = 15_000) {
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), intervalMs)

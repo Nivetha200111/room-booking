@@ -8,7 +8,8 @@ import { useAuth } from '../auth/AuthContext'
 
 function roundedNow(addMin = 0) {
   const d = new Date()
-  d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15 + addMin, 0, 0)
+  d.setSeconds(0, 0)
+  d.setMinutes(d.getMinutes() + addMin)
   return d
 }
 function toLocalInput(d: Date) {
