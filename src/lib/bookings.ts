@@ -1,9 +1,6 @@
 import type { Booking } from '../types'
 import { ROOMS, getRoom } from '../rooms'
 
-export const MAX_DURATION_MS = 7 * 24 * 60 * 60 * 1000 // 1 week
-export const FULL_DAY_MS = 8 * 60 * 60 * 1000 // threshold that counts as "whole day"
-
 export function overlaps(a: { start: string; end: string }, b: { start: string; end: string }) {
   return new Date(a.start) < new Date(b.end) && new Date(b.start) < new Date(a.end)
 }
@@ -46,10 +43,7 @@ export function validateBooking(
     errors.push('Set a valid start and end time.')
   } else {
     if (end <= start) errors.push('End time must be after the start time.')
-    const dur = +end - +start
-    if (dur > MAX_DURATION_MS) errors.push('Maximum booking duration is one week.')
     if (end < new Date()) warnings.push('This booking is entirely in the past.')
-    if (dur >= FULL_DAY_MS) warnings.push('Whole-day booking — please reserve only the time you genuinely need.')
     if (room && !errors.length) {
       const clash = bookings.find((b) => b.roomId === room.id && b.id !== ignoreId && overlaps(draft, b))
       if (clash) {

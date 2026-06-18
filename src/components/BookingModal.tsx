@@ -235,7 +235,7 @@ export function BookingModal({
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              {[15, 30, 45, 60, 90].map((m) => (
+              {[15, 30, 45, 60, 90, 120, 240].map((m) => (
                 <button
                   key={m}
                   onClick={() => quick(m)}
@@ -262,7 +262,7 @@ export function BookingModal({
           {/* footer */}
           <div className="flex items-center justify-between gap-3 border-t border-line px-5 py-3.5">
             <p className="text-[12px] text-phantom-40">
-              Booking as <span className="text-phantom-20">{user?.name}</span> · max 1 week
+              Booking as <span className="text-phantom-20">{user?.name}</span>
             </p>
             <div className="flex gap-2">
               <button onClick={onClose} className="rounded-lg px-3 py-2 text-sm font-semibold text-phantom-20 transition hover:bg-phantom-90 hover:text-polar">
