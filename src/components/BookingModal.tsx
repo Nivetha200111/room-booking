@@ -76,6 +76,27 @@ export function BookingModal({
     setEnd(toLocalInput(new Date(s.getTime() + mins * 60000)))
   }
 
+  // jump the booking to a given day, keeping the current duration. Today uses
+  // the current time; future days default to 9:00 AM.
+  const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
+  const dayOptions = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() + i)
+    return d
+  })
+  const setDay = (base: Date) => {
+    const dur = new Date(end).getTime() - new Date(start).getTime() || 30 * 60000
+    const s = new Date(base)
+    if (sameDay(base, new Date())) {
+      const n = roundedNow()
+      s.setHours(n.getHours(), n.getMinutes(), 0, 0)
+    } else {
+      s.setHours(9, 0, 0, 0)
+    }
+    setStart(toLocalInput(s))
+    setEnd(toLocalInput(new Date(s.getTime() + dur)))
+  }
+
   const submit = () => {
     if (!result.ok || !user) return
     // include any half-typed name still in the input
@@ -180,6 +201,27 @@ export function BookingModal({
                   placeholder={attendeeNames.length ? 'Add another' : 'Add a name and press Enter'}
                   className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm text-polar placeholder-phantom-60 outline-none"
                 />
+              </div>
+            </Field>
+
+            <Field label="Date">
+              <div className="flex flex-wrap gap-1.5">
+                {dayOptions.map((d, i) => {
+                  const selected = sameDay(new Date(start), d)
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setDay(d)}
+                      className={`rounded-lg px-2.5 py-1 text-[13px] font-semibold transition ease-ks ${
+                        selected
+                          ? 'bg-keen text-phantom'
+                          : 'border border-line text-phantom-20 hover:border-line-strong hover:text-polar'
+                      }`}
+                    >
+                      {i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.toLocaleDateString([], { weekday: 'short', day: 'numeric' })}
+                    </button>
+                  )
+                })}
               </div>
             </Field>
 
