@@ -108,9 +108,12 @@ export function WeekView({
                             onCancel(b)
                           }}
                           title={`${b.agenda} · ${b.organizer} · ${fmtTime(b.start)}–${fmtTime(b.end)}${b.attendeeNames?.length ? `\nAttendees: ${b.attendeeNames.join(', ')}` : ''}`}
-                          className="block truncate rounded bg-keen px-1 py-0.5 text-[10px] font-semibold text-phantom shadow-sm"
+                          className="block overflow-hidden rounded bg-keen px-1 py-0.5 font-semibold text-phantom shadow-sm"
                         >
-                          {fmtTime(b.start)} {b.agenda}
+                          <span className="block whitespace-nowrap text-[9px] tracking-tight">
+                            {fmtTime(b.start)}–{fmtTime(b.end)}
+                          </span>
+                          <span className="block truncate text-[10px]">{b.agenda}</span>
                         </span>
                       ))}
                       {cell.length === 0 && (

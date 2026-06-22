@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { BookOpen, Check, LogOut, Cloud, CloudOff, ShieldCheck } from 'lucide-react'
+import { BookOpen, Check, LogOut, Cloud, CloudOff, ShieldCheck, Moon, Sun } from 'lucide-react'
 import type { Booking, Room } from './types'
 import { ROOMS } from './rooms'
 import { activeBooking } from './lib/bookings'
@@ -21,14 +21,38 @@ import { PolicyDrawer } from './components/PolicyDrawer'
 
 type FloorFilter = 'all' | 1 | 2
 type ScheduleView = 'today' | 'week'
+type Theme = 'dark' | 'light'
+
+const THEME_KEY = 'keenstack.theme.v1'
 
 export default function App() {
   const { user } = useAuth()
-  if (!user) return <Login />
-  return <Board />
+  const [theme, setTheme] = useState<Theme>(() =>
+    localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark',
+  )
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.documentElement.style.colorScheme = theme
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
+
+  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+
+  if (!user) {
+    return (
+      <>
+        <Login />
+        <div className="fixed right-4 top-4 z-30">
+          <ThemeToggle theme={theme} onToggle={toggleTheme} />
+        </div>
+      </>
+    )
+  }
+  return <Board theme={theme} onToggleTheme={toggleTheme} />
 }
 
-function Board() {
+function Board({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
   const { user, signOut } = useAuth()
   const { bookings, inbox, add, remove, reload } = useBoard(user)
   const now = useNow()
@@ -120,7 +144,7 @@ function Board() {
   return (
     <div className="min-h-screen">
       {/* top bar */}
-      <header className="sticky top-0 z-30 border-b border-line bg-phantom/85 backdrop-blur">
+      <header className="app-header sticky top-0 z-30 border-b border-line bg-[var(--header-bg)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
           <img src="/brand/logo-primary.png" alt="KeenStack" className="h-14 w-auto sm:h-16" />
 
@@ -133,6 +157,7 @@ function Board() {
               {useApi ? 'Shared' : 'Local'}
             </span>
             <Notifications inbox={inbox} onResolve={onResolve} />
+            <ThemeToggle theme={theme} onToggle={onToggleTheme} />
             {user!.role === 'admin' && (
               <button
                 onClick={() => setAdminOpen(true)}
@@ -287,5 +312,20 @@ function Board() {
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
+  const next = theme === 'dark' ? 'light' : 'dark'
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      title={`Switch to ${next} mode`}
+      aria-label={`Switch to ${next} mode`}
+      className="flex h-8 w-8 items-center justify-center rounded-lg border border-line text-phantom-20 transition ease-ks hover:border-line-strong hover:bg-phantom-90 hover:text-polar"
+    >
+      {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+    </button>
   )
 }

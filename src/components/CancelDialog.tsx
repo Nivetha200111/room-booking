@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Send, Zap, AlertTriangle, Clock, ShieldAlert } from 'lucide-react'
+import { X, Send, Clock, ShieldAlert } from 'lucide-react'
 import type { Booking } from '../types'
 import { getRoom } from '../rooms'
 import { fmtTime } from '../lib/bookings'
-
-type Choice = 'request' | 'release'
 
 export function CancelDialog({
   booking,
@@ -27,24 +25,23 @@ export function CancelDialog({
   onReleaseNow: (reason: string) => void
 }) {
   const room = getRoom(booking.roomId)
-  const ended = new Date(booking.end) <= new Date()
-  const [choice, setChoice] = useState<Choice>('request')
+  const now = new Date()
+  const ended = new Date(booking.end) <= now
+  const inProgress = new Date(booking.start) <= now && !ended
   const [reason, setReason] = useState('')
   const [scope, setScope] = useState<'one' | 'series'>('one')
-  const isSeries = isOwner && seriesCount > 1
+  const isSeries = isOwner && !inProgress && seriesCount > 1
 
-  // admin can override anyone's booking directly (the owner is still notified)
+  // Only admins can override someone else's booking directly (the owner is notified).
   const adminOverride = isAdmin && !isOwner && !ended
 
-  const reasonOk = choice === 'request' || reason.trim().length > 0
-  const canConfirm = isOwner || adminOverride || (!ended && reasonOk)
+  const canConfirm = isOwner || adminOverride || !ended
 
   const confirm = () => {
     if (isOwner) return onCancelOwn(scope)
     if (ended) return
     if (adminOverride) return onReleaseNow(reason.trim() || 'Cancelled by an administrator')
-    if (choice === 'request') onRequestRelease(reason)
-    else if (reason.trim()) onReleaseNow(reason)
+    onRequestRelease(reason)
   }
 
   return (
@@ -68,7 +65,7 @@ export function CancelDialog({
           <div className="flex items-start justify-between border-b border-line px-5 py-4">
             <div>
               <h2 className="font-display text-lg font-semibold text-polar">
-                {isOwner ? 'Cancel your booking?' : `${room?.name} is booked`}
+                {isOwner ? (inProgress ? 'Release room early?' : 'Cancel your booking?') : `${room?.name} is booked`}
               </h2>
               <p className="text-[13px] text-phantom-40">
                 {booking.agenda} · {booking.organizer} · {fmtTime(booking.start)}–{fmtTime(booking.end)}
@@ -86,7 +83,11 @@ export function CancelDialog({
 
           <div className="space-y-3 px-5 py-4">
             {isOwner ? (
-              isSeries ? (
+              inProgress ? (
+                <p className="text-sm text-phantom-20">
+                  Meeting finished early? Release {room?.name} now so someone else can book the remaining time.
+                </p>
+              ) : isSeries ? (
                 <>
                   <p className="text-sm text-phantom-20">This booking is part of a recurring series.</p>
                   <div className="space-y-2">
@@ -124,7 +125,7 @@ export function CancelDialog({
               <>
                 <p className="flex items-start gap-2 rounded-lg border border-codeblue/30 bg-codeblue/10 px-3 py-2.5 text-sm text-phantom-20">
                   <ShieldAlert size={15} className="mt-0.5 shrink-0 text-codeblue" />
-                  As an admin you can cancel {booking.organizer}'s booking directly. They'll be notified.
+                  As an admin, you can release {booking.organizer}'s booking immediately. They'll be notified.
                 </p>
                 <label className="block pt-1">
                   <span className="mb-1.5 block text-[13px] font-semibold text-phantom-20">Reason (optional)</span>
@@ -139,45 +140,28 @@ export function CancelDialog({
               </>
             ) : (
               <>
-                <OptionCard
-                  active={choice === 'request'}
-                  onClick={() => setChoice('request')}
-                  icon={<Send size={15} />}
-                  title="Request Release"
-                  desc={`Ask ${booking.organizer} to free the room. They approve or decline.`}
-                />
-                <OptionCard
-                  active={choice === 'release'}
-                  onClick={() => setChoice('release')}
-                  icon={<Zap size={15} />}
-                  title="Release Now"
-                  desc={`Cancel ${booking.organizer}'s booking immediately. They'll be notified.`}
-                  danger
-                />
+                <div className="flex w-full items-start gap-3 rounded-lg border border-keen/50 bg-keen/10 px-3 py-2.5 text-left">
+                  <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-keen/15 text-keen">
+                    <Send size={15} />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-semibold text-polar">Request Release</span>
+                    <span className="block text-[13px] text-phantom-40">
+                      Ask {booking.organizer} to free the room. They approve or decline.
+                    </span>
+                  </span>
+                </div>
 
                 <label className="block pt-1">
-                  <span className="mb-1.5 block text-[13px] font-semibold text-phantom-20">
-                    {choice === 'release' ? 'Reason (required)' : 'Message (optional)'}
-                  </span>
+                  <span className="mb-1.5 block text-[13px] font-semibold text-phantom-20">Message (optional)</span>
                   <textarea
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     rows={2}
-                    placeholder={
-                      choice === 'release'
-                        ? 'Why do you need this room right now?'
-                        : 'Add a short note for the owner…'
-                    }
+                    placeholder="Add a short note for the owner…"
                     className="w-full resize-none rounded-lg border border-line bg-phantom-90 px-3 py-2 text-sm text-polar placeholder-phantom-60 outline-none transition focus:border-codeblue focus:ring-2 focus:ring-codeblue/40"
                   />
                 </label>
-
-                {choice === 'release' && (
-                  <p className="flex items-start gap-2 text-[12px] text-warning">
-                    <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-                    This overrides someone else's booking and is logged.
-                  </p>
-                )}
               </>
             )}
           </div>
@@ -192,66 +176,25 @@ export function CancelDialog({
                 onClick={confirm}
                 disabled={!canConfirm}
                 className={`rounded-lg px-4 py-2 text-sm font-bold transition-colors ease-ks disabled:cursor-not-allowed disabled:opacity-40 ${
-                  isOwner || adminOverride || choice === 'release'
+                  isOwner || adminOverride
                     ? 'bg-danger text-white enabled:hover:bg-danger/85'
                     : 'bg-keen text-phantom enabled:hover:bg-keen-dark'
                 }`}
               >
                 {isOwner
-                  ? isSeries && scope === 'series'
+                  ? inProgress
+                    ? 'Release Room Early'
+                    : isSeries && scope === 'series'
                     ? `Cancel ${seriesCount} Bookings`
                     : 'Cancel Booking'
                   : adminOverride
-                    ? 'Cancel as Admin'
-                    : choice === 'release'
-                      ? 'Release Now'
-                      : 'Send Request'}
+                    ? 'Release Now'
+                    : 'Send Request'}
               </button>
             )}
           </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>
-  )
-}
-
-function OptionCard({
-  active,
-  onClick,
-  icon,
-  title,
-  desc,
-  danger,
-}: {
-  active: boolean
-  onClick: () => void
-  icon: React.ReactNode
-  title: string
-  desc: string
-  danger?: boolean
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition ease-ks ${
-        active
-          ? danger
-            ? 'border-danger/50 bg-danger/10'
-            : 'border-keen/50 bg-keen/10'
-          : 'border-line bg-phantom-90 hover:border-line-strong'
-      }`}
-    >
-      <span
-        className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
-          danger ? 'bg-danger/15 text-danger' : 'bg-keen/15 text-keen'
-        }`}
-      >
-        {icon}
-      </span>
-      <span>
-        <span className="block text-sm font-semibold text-polar">{title}</span>
-        <span className="block text-[13px] text-phantom-40">{desc}</span>
-      </span>
-    </button>
   )
 }

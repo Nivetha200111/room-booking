@@ -11,6 +11,27 @@
 
 :root {
   color-scheme: dark;
+  --color-phantom: 17 34 69;
+  --color-phantom-95: 21 42 82;
+  --color-phantom-90: 26 45 86;
+  --color-phantom-80: 43 61 101;
+  --color-phantom-60: 91 106 138;
+  --color-phantom-40: 140 152 176;
+  --color-phantom-20: 189 196 210;
+  --color-polar: 236 242 247;
+  --color-panel: 17 34 69;
+  --color-keen: 32 201 160;
+  --color-keen-dark: 26 167 134;
+  --color-keen-light: 180 235 218;
+  --color-codeblue: 21 60 168;
+  --color-codeblue-dark: 15 46 133;
+  --color-ksslate: 217 222 226;
+  --color-warning: 232 168 56;
+  --color-danger: 216 69 62;
+  --color-line: 236 242 247;
+  --color-line-strong: 236 242 247;
+  --opacity-line: 0.1;
+  --opacity-line-strong: 0.18;
   /* Brand palette (KeenStack Brand Guidelines v1) */
   --ks-phantom: #112245;
   --ks-polar: #ecf2f7;
@@ -23,6 +44,60 @@
   --panel-2: #16294f;  /* elevated */
   --line: rgba(236, 242, 247, 0.1);
   --line-strong: rgba(236, 242, 247, 0.18);
+  --header-bg: rgba(17, 34, 69, 0.85);
+  --room-table: #27324d;
+  --room-chair: #5b6a8a;
+  --room-restricted-floor: rgba(8, 16, 34, 0.55);
+  --room-restricted-wall: rgba(236, 242, 247, 0.12);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-phantom-95: 247 249 252;
+  --color-phantom-90: 238 243 248;
+  --color-phantom-80: 222 230 239;
+  --color-phantom-60: 99 113 134;
+  --color-phantom-40: 75 90 112;
+  --color-phantom-20: 45 59 83;
+  --color-polar: 17 34 69;
+  --color-panel: 255 255 255;
+  --color-keen: 0 112 85;
+  --color-keen-dark: 0 91 70;
+  --color-keen-light: 196 241 227;
+  --color-codeblue: 21 60 168;
+  --color-codeblue-dark: 15 46 133;
+  --color-ksslate: 63 78 100;
+  --color-warning: 138 82 0;
+  --color-danger: 180 35 24;
+  --color-line: 17 34 69;
+  --color-line-strong: 17 34 69;
+  --opacity-line: 0.12;
+  --opacity-line-strong: 0.22;
+  --bg: #f4f7fb;
+  --panel: #ffffff;
+  --panel-2: #eef3f8;
+  --line: rgba(17, 34, 69, 0.12);
+  --line-strong: rgba(17, 34, 69, 0.22);
+  --header-bg: rgba(17, 34, 69, 0.97);
+  --room-table: #cbd5e1;
+  --room-chair: #75839a;
+  --room-restricted-floor: rgba(17, 34, 69, 0.06);
+  --room-restricted-wall: rgba(17, 34, 69, 0.25);
+}
+
+/* Keep one strong Phantom anchor in light mode while preserving header contrast. */
+:root[data-theme='light'] .app-header {
+  --color-phantom-90: 26 45 86;
+  --color-phantom-80: 43 61 101;
+  --color-phantom-60: 130 145 172;
+  --color-phantom-40: 166 178 199;
+  --color-phantom-20: 218 225 235;
+  --color-polar: 255 255 255;
+  --color-codeblue: 137 170 255;
+  --color-line: 236 242 247;
+  --color-line-strong: 236 242 247;
+  --opacity-line: 0.14;
+  --opacity-line-strong: 0.28;
 }
 
 html,
@@ -34,7 +109,7 @@ body,
 body {
   margin: 0;
   background: var(--bg);
-  color: var(--ks-polar);
+  color: rgb(var(--color-polar));
   font-family: 'Open Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 16px;
   line-height: 1.55;
@@ -88,6 +163,15 @@ body {
   pointer-events: none;
 }
 
+:root[data-theme='light'] .ripple-faint::before {
+  opacity: 0.025;
+}
+
+/* Green is darkened for readable text in light mode; filled controls use white labels. */
+:root[data-theme='light'] .bg-keen {
+  color: #fff;
+}
+
 /* Recolor the native date/time picker icon to Keen Green so it's visible on
    the dark inputs (the default icon is near-black and disappears). */
 input::-webkit-calendar-picker-indicator {
@@ -132,4 +216,3 @@ input::-webkit-calendar-picker-indicator:hover {
     animation: none;
   }
 }
-

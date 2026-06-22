@@ -185,6 +185,9 @@ export async function deleteSeries(seriesId: string): Promise<void> {
 // ---------- release actions (request release / release now) ----------
 
 async function postRelease(booking: Booking, actor: User, reason: string, kind: ReleaseKind): Promise<void> {
+  if (kind === 'release' && actor.role !== 'admin') {
+    throw new Error('Only administrators can release another employee’s booking immediately.')
+  }
   if (useApi) {
     await api('release', {
       method: 'POST',

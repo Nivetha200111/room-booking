@@ -4,13 +4,13 @@ import type { Booking, Floor, Room } from '../types'
 import { activeBooking, nextBooking, fmtTime } from '../lib/bookings'
 
 const STATUS = {
-  free: { floor: 'rgba(32,201,160,0.06)', wall: 'rgba(32,201,160,0.42)', label: '#20c9a0', glow: '0 0 26px -10px rgba(32,201,160,0.55)' },
-  busy: { floor: 'rgba(232,168,56,0.11)', wall: 'rgba(232,168,56,0.55)', label: '#e8a838', glow: '0 0 30px -8px rgba(232,168,56,0.6)' },
-  restricted: { floor: 'rgba(8,16,34,0.55)', wall: 'rgba(236,242,247,0.12)', label: '#8c98b0', glow: 'none' },
+  free: { floor: 'rgba(32,201,160,0.06)', wall: 'rgba(32,201,160,0.42)', label: 'rgb(var(--color-keen))', glow: '0 0 26px -10px rgba(32,201,160,0.55)' },
+  busy: { floor: 'rgba(232,168,56,0.11)', wall: 'rgba(232,168,56,0.55)', label: 'rgb(var(--color-warning))', glow: '0 0 30px -8px rgba(232,168,56,0.6)' },
+  restricted: { floor: 'var(--room-restricted-floor)', wall: 'var(--room-restricted-wall)', label: 'rgb(var(--color-phantom-40))', glow: 'none' },
 }
 
-const TABLE = '#27324d'
-const CHAIR = '#5b6a8a'
+const TABLE = 'var(--room-table)'
+const CHAIR = 'var(--room-chair)'
 
 function Chairs({ n }: { n: number }) {
   return (
@@ -109,7 +109,7 @@ function RoomTile({
         </div>
         <span
           className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-          style={{ color: s.label, background: `${s.label}24` }}
+          style={{ color: s.label, background: `color-mix(in srgb, ${s.label} 14%, transparent)` }}
         >
           {status !== 'restricted' && (
             <span className="relative flex h-1.5 w-1.5">
