@@ -20,7 +20,6 @@ const RULES = [
   'Avoid whole-day bookings unless genuinely needed.',
   'If a floor is full, use a room on the other floor.',
   'No-show after 10–15 min → the room frees up for others.',
-  'CEO & Founder room is a restricted area — no access.',
 ]
 
 export function PolicyDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {

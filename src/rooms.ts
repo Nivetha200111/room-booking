@@ -8,15 +8,6 @@ export const ROOMS: Room[] = [
   { id: 'phoenix', name: 'Phoenix', floor: 1, capacity: 8, amenities: ['TV', 'Conference phone', 'HDMI'] },
   { id: 'san-diego', name: 'San Diego', floor: 2, capacity: 4, amenities: ['TV', 'Whiteboard'] },
   { id: 'london', name: 'London', floor: 2, capacity: 12, amenities: ['Projector', 'Conference phone', 'Whiteboard', 'HDMI'] },
-  {
-    id: 'ceo-founder',
-    name: 'CEO & Founder',
-    floor: 1,
-    capacity: 0,
-    amenities: [],
-    restricted: true,
-    restrictedNote: 'Restricted area — access and bookings are not permitted under any circumstances.',
-  },
 ]
 
 export const PURPOSES: Purpose[] = ['Project meeting', 'Client meeting', 'Project discussion', 'One-on-one']

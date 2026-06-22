@@ -97,7 +97,7 @@ function Board() {
       {/* top bar */}
       <header className="sticky top-0 z-30 border-b border-line bg-phantom/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <img src="/brand/logo-primary.png" alt="KeenStack" className="h-6 w-auto" />
+          <img src="/brand/logo-primary.png" alt="KeenStack" className="h-10 w-auto sm:h-12" />
 
           <div className="flex items-center gap-2">
             <span
