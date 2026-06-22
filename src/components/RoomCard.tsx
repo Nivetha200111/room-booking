@@ -29,9 +29,9 @@ export function RoomCard({
   const status = room.restricted ? 'restricted' : active ? 'busy' : 'free'
 
   const statusMeta = {
-    free: { label: 'Available', color: '#20c9a0', lit: 'lit-free' },
-    busy: { label: 'In Use', color: '#e8a838', lit: 'lit-busy' },
-    restricted: { label: 'Restricted', color: '#8c98b0', lit: 'lit-restricted' },
+    free: { label: 'Available', color: 'rgb(var(--color-keen))', lit: 'lit-free' },
+    busy: { label: 'In Use', color: 'rgb(var(--color-warning))', lit: 'lit-busy' },
+    restricted: { label: 'Restricted', color: 'rgb(var(--color-phantom-40))', lit: 'lit-restricted' },
   }[status]
 
   return (
@@ -51,7 +51,7 @@ export function RoomCard({
 
         <div
           className="flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide"
-          style={{ color: statusMeta.color, backgroundColor: `${statusMeta.color}1f` }}
+          style={{ color: statusMeta.color, backgroundColor: `color-mix(in srgb, ${statusMeta.color} 12%, transparent)` }}
         >
           <span className="relative flex h-1.5 w-1.5">
             {status !== 'restricted' && (

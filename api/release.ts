@@ -55,6 +55,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (kind === 'release' && !String(reason ?? '').trim()) {
         return res.status(400).json({ error: 'A reason is required to release a booking.' })
       }
+      if (kind === 'release') {
+        const employee = (await sql`
+          select role from employees where employee_id = ${String(actor.employeeId).trim().toUpperCase()}
+        `) as Array<{ role: string }>
+        if (employee[0]?.role !== 'admin') {
+          return res.status(403).json({ error: 'Only administrators can release a booking immediately.' })
+        }
+      }
 
       const booked = (await sql`
         select id, room_id, employee_id, organizer, agenda, start_ts, end_ts

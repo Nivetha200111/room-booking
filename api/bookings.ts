@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { neon } from '@neondatabase/serverless'
 
 const sql = neon(process.env.DATABASE_URL!)
+const LOCKED_ROOM_IDS = new Set(['phoenix'])
 
 type Row = {
   id: string
@@ -89,6 +90,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const b = req.body ?? {}
       if (!b.roomId || !b.agenda || !b.employeeId) {
         return res.status(400).json({ error: 'Missing required booking fields.' })
+      }
+      if (LOCKED_ROOM_IDS.has(String(b.roomId).toLowerCase())) {
+        return res.status(403).json({ error: 'Phoenix is locked and cannot be booked.' })
       }
 
       // ---- recurring series: create many occurrences in one request ----
