@@ -7,7 +7,7 @@ export const ROOMS: Room[] = [
   { id: 'washington-dc', name: 'Washington DC', floor: 1, capacity: 6, amenities: ['TV', 'Whiteboard'] },
   { id: 'phoenix', name: 'Phoenix', floor: 1, capacity: 8, amenities: ['TV', 'Conference phone', 'HDMI'] },
   { id: 'san-diego', name: 'San Diego', floor: 2, capacity: 4, amenities: ['TV', 'Whiteboard'] },
-  { id: 'singapore', name: 'Singapore', floor: 2, capacity: 12, amenities: ['Projector', 'Conference phone', 'Whiteboard', 'HDMI'] },
+  { id: 'london', name: 'London', floor: 2, capacity: 12, amenities: ['Projector', 'Conference phone', 'Whiteboard', 'HDMI'] },
   {
     id: 'ceo-founder',
     name: 'CEO & Founder',
