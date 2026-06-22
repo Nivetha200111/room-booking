@@ -5,7 +5,8 @@ import type { Booking, Room } from './types'
 import { ROOMS } from './rooms'
 import { activeBooking } from './lib/bookings'
 import { useApi } from './lib/config'
-import { requestRelease, releaseNow, resolveRequest } from './lib/db'
+import { requestRelease, releaseNow, resolveRequest, createSeries, deleteSeries } from './lib/db'
+import type { SeriesDraft } from './components/BookingModal'
 import { useBoard, useNow } from './hooks/useBookings'
 import { useAuth } from './auth/AuthContext'
 import { Login } from './components/Login'
@@ -60,10 +61,34 @@ function Board() {
     }
   }
 
-  const cancelOwn = async (b: Booking) => {
-    await remove(b.id)
+  const onConfirmSeries = async (s: SeriesDraft) => {
+    const { occurrences, ...draft } = s
+    try {
+      const res = await createSeries(draft, occurrences)
+      setBooking(null)
+      reload()
+      const room = ROOMS.find((r) => r.id === draft.roomId)?.name
+      flash(
+        res.skipped.length
+          ? `Booked ${res.created.length} ${room} slots (${res.skipped.length} clashing skipped)`
+          : `Booked ${res.created.length} ${room} slots`,
+      )
+    } catch {
+      reload()
+      flash('Could not create the series — please try again.')
+    }
+  }
+
+  const cancelOwn = async (b: Booking, scope: 'one' | 'series' = 'one') => {
+    if (scope === 'series' && b.seriesId) {
+      await deleteSeries(b.seriesId)
+      reload()
+      flash('Series cancelled')
+    } else {
+      await remove(b.id)
+      flash('Booking cancelled')
+    }
     setCancelTarget(null)
-    flash('Booking cancelled')
   }
 
   const doRequestRelease = async (b: Booking, reason: string) => {
@@ -97,7 +122,7 @@ function Board() {
       {/* top bar */}
       <header className="sticky top-0 z-30 border-b border-line bg-phantom/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-          <img src="/brand/logo-primary.png" alt="KeenStack" className="h-10 w-auto sm:h-12" />
+          <img src="/brand/logo-primary.png" alt="KeenStack" className="h-14 w-auto sm:h-16" />
 
           <div className="flex items-center gap-2">
             <span
@@ -224,6 +249,7 @@ function Board() {
           initialStart={booking.start}
           onClose={() => setBooking(null)}
           onConfirm={onConfirm}
+          onConfirmSeries={onConfirmSeries}
         />
       )}
       {cancelTarget && (
@@ -231,8 +257,13 @@ function Board() {
           booking={cancelTarget}
           isOwner={cancelTarget.employeeId === user!.employeeId}
           isAdmin={user!.role === 'admin'}
+          seriesCount={
+            cancelTarget.seriesId
+              ? bookings.filter((b) => b.seriesId === cancelTarget.seriesId).length
+              : 0
+          }
           onClose={() => setCancelTarget(null)}
-          onCancelOwn={() => cancelOwn(cancelTarget)}
+          onCancelOwn={(scope) => cancelOwn(cancelTarget, scope)}
           onRequestRelease={(reason) => doRequestRelease(cancelTarget, reason)}
           onReleaseNow={(reason) => doReleaseNow(cancelTarget, reason)}
         />

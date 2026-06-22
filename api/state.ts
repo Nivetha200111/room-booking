@@ -14,6 +14,7 @@ const toBooking = (r: any) => ({
   purpose: r.purpose,
   attendees: Number(r.attendees),
   attendeeNames: Array.isArray(r.attendee_names) ? r.attendee_names : [],
+  seriesId: r.series_id ?? undefined,
   start: iso(r.start_ts),
   end: iso(r.end_ts),
   createdAt: iso(r.created_at),
@@ -23,6 +24,7 @@ let schemaReady = false
 async function ensureSchema() {
   if (schemaReady) return
   await sql`alter table bookings add column if not exists attendee_names jsonb not null default '[]'::jsonb`
+  await sql`alter table bookings add column if not exists series_id text`
   schemaReady = true
 }
 
@@ -59,7 +61,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const employeeId = typeof req.query.employeeId === 'string' ? req.query.employeeId : null
 
     const bookings = (await sql`
-      select id, room_id, employee_id, organizer, agenda, purpose, attendees, attendee_names, start_ts, end_ts, created_at
+      select id, room_id, employee_id, organizer, agenda, purpose, attendees, attendee_names, series_id, start_ts, end_ts, created_at
       from bookings order by start_ts
     `) as any[]
 

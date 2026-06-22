@@ -1,10 +1,27 @@
 import { useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, AlertTriangle, Info } from 'lucide-react'
-import type { Booking, Purpose, Room } from '../types'
+import { X, AlertTriangle, Info, Repeat } from 'lucide-react'
+import type { Booking, Occurrence, Purpose, RepeatMode, Room } from '../types'
 import { PURPOSES } from '../rooms'
-import { validateBooking } from '../lib/bookings'
+import { validateBooking, generateOccurrences, overlaps, MAX_OCCURRENCES } from '../lib/bookings'
 import { useAuth } from '../auth/AuthContext'
+
+export interface SeriesDraft extends Omit<Booking, 'id' | 'createdAt' | 'start' | 'end' | 'seriesId'> {
+  occurrences: Occurrence[]
+}
+
+const REPEAT_LABELS: Record<RepeatMode, string> = {
+  none: 'Does not repeat',
+  weekdays: 'Every weekday (Mon–Fri)',
+  daily: 'Every day',
+  weekly: 'Weekly',
+}
+const fmtDay = (iso: string) =>
+  new Date(iso).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+const toDateInput = (d: Date) => {
+  const off = d.getTimezoneOffset()
+  return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10)
+}
 
 function roundedNow(addMin = 0) {
   const d = new Date()
@@ -23,12 +40,14 @@ export function BookingModal({
   initialStart,
   onClose,
   onConfirm,
+  onConfirmSeries,
 }: {
   room: Room
   bookings: Booking[]
   initialStart?: Date
   onClose: () => void
   onConfirm: (b: Omit<Booking, 'id' | 'createdAt'>) => void
+  onConfirmSeries: (s: SeriesDraft) => void
 }) {
   const { user } = useAuth()
   const [agenda, setAgenda] = useState('')
@@ -57,6 +76,12 @@ export function BookingModal({
   const [end, setEnd] = useState(() =>
     toLocalInput(initialStart ? new Date(initialStart.getTime() + 30 * 60000) : roundedNow(30)),
   )
+  const [repeat, setRepeat] = useState<RepeatMode>('none')
+  const [until, setUntil] = useState(() => {
+    const d = new Date(initialStart ?? new Date())
+    d.setDate(d.getDate() + 6)
+    return toDateInput(d)
+  })
 
   const draft = useMemo(
     () => ({
@@ -70,6 +95,17 @@ export function BookingModal({
   )
 
   const result = useMemo(() => validateBooking(draft, bookings), [draft, bookings])
+
+  // recurring occurrences + how many clash with existing bookings
+  const occurrences = useMemo<Occurrence[]>(
+    () => generateOccurrences(draft.start, draft.end, repeat, until),
+    [draft.start, draft.end, repeat, until],
+  )
+  const conflicts = useMemo(
+    () => occurrences.filter((o) => bookings.some((b) => b.roomId === room.id && overlaps(o, b))).length,
+    [occurrences, bookings, room.id],
+  )
+  const bookable = occurrences.length - conflicts
 
   const quick = (mins: number) => {
     const s = new Date(start)
@@ -97,21 +133,29 @@ export function BookingModal({
     setEnd(toLocalInput(new Date(s.getTime() + dur)))
   }
 
+  const canSubmit = result.ok && !!user && (repeat === 'none' || bookable > 0)
+
   const submit = () => {
-    if (!result.ok || !user) return
+    if (!canSubmit || !user) return
     // include any half-typed name still in the input
     const pending = nameInput.trim()
     const finalNames = pending && !attendeeNames.some((n) => n.toLowerCase() === pending.toLowerCase())
       ? [...attendeeNames, pending]
       : attendeeNames
-    onConfirm({
-      ...draft,
+    const common = {
+      roomId: room.id,
+      agenda,
+      purpose,
       attendees: finalNames.length > 0 ? finalNames.length : attendees,
       attendeeNames: finalNames,
-      purpose,
       organizer: user.name,
       employeeId: user.employeeId,
-    })
+    }
+    if (repeat === 'none') {
+      onConfirm({ ...common, start: draft.start, end: draft.end })
+    } else {
+      onConfirmSeries({ ...common, occurrences })
+    }
   }
 
   return (
@@ -246,6 +290,49 @@ export function BookingModal({
               ))}
             </div>
 
+            {/* recurring */}
+            <Field label="Repeat">
+              <div className="grid grid-cols-2 gap-3">
+                <select value={repeat} onChange={(e) => setRepeat(e.target.value as RepeatMode)} className={input}>
+                  {(Object.keys(REPEAT_LABELS) as RepeatMode[]).map((m) => (
+                    <option key={m} value={m} className="bg-panel">
+                      {REPEAT_LABELS[m]}
+                    </option>
+                  ))}
+                </select>
+                {repeat !== 'none' && (
+                  <label className="flex items-center gap-2">
+                    <span className="text-[13px] text-phantom-40">Until</span>
+                    <input
+                      type="date"
+                      value={until}
+                      min={toDateInput(new Date(start))}
+                      onChange={(e) => setUntil(e.target.value)}
+                      className={input}
+                    />
+                  </label>
+                )}
+              </div>
+            </Field>
+
+            {repeat !== 'none' && (
+              <p className="flex items-start gap-2 rounded-lg border border-keen/30 bg-keen/10 px-3 py-2 text-[13px] text-phantom-20">
+                <Repeat size={14} className="mt-0.5 shrink-0 text-keen" />
+                {occurrences.length === 0 ? (
+                  <span>No dates in this range. Pick an end date on or after the start.</span>
+                ) : (
+                  <span>
+                    Creates <b className="text-polar">{bookable}</b> booking{bookable === 1 ? '' : 's'}
+                    {conflicts > 0 && <span className="text-warning"> ({conflicts} clash, skipped)</span>}
+                    {' · '}
+                    {fmtDay(occurrences[0].start)}
+                    {occurrences.length > 1 && <> to {fmtDay(occurrences[occurrences.length - 1].start)}</>}
+                    {occurrences.length >= MAX_OCCURRENCES && ' (max reached)'}
+                  </span>
+                )}
+              </p>
+            )}
+
             {result.errors.map((e) => (
               <p key={e} className="flex items-start gap-2 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] text-danger">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {e}
@@ -270,10 +357,10 @@ export function BookingModal({
               </button>
               <button
                 onClick={submit}
-                disabled={!result.ok}
+                disabled={!canSubmit}
                 className="rounded-lg bg-keen px-4 py-2 text-sm font-bold text-phantom transition-colors ease-ks enabled:hover:bg-keen-dark disabled:cursor-not-allowed disabled:opacity-40"
               >
-                Confirm Booking
+                {repeat === 'none' ? 'Confirm Booking' : `Book ${bookable} slot${bookable === 1 ? '' : 's'}`}
               </button>
             </div>
           </div>

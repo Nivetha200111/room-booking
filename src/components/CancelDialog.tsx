@@ -11,6 +11,7 @@ export function CancelDialog({
   booking,
   isOwner,
   isAdmin = false,
+  seriesCount = 0,
   onClose,
   onCancelOwn,
   onRequestRelease,
@@ -19,8 +20,9 @@ export function CancelDialog({
   booking: Booking
   isOwner: boolean
   isAdmin?: boolean
+  seriesCount?: number
   onClose: () => void
-  onCancelOwn: () => void
+  onCancelOwn: (scope: 'one' | 'series') => void
   onRequestRelease: (reason: string) => void
   onReleaseNow: (reason: string) => void
 }) {
@@ -28,6 +30,8 @@ export function CancelDialog({
   const ended = new Date(booking.end) <= new Date()
   const [choice, setChoice] = useState<Choice>('request')
   const [reason, setReason] = useState('')
+  const [scope, setScope] = useState<'one' | 'series'>('one')
+  const isSeries = isOwner && seriesCount > 1
 
   // admin can override anyone's booking directly (the owner is still notified)
   const adminOverride = isAdmin && !isOwner && !ended
@@ -36,7 +40,7 @@ export function CancelDialog({
   const canConfirm = isOwner || adminOverride || (!ended && reasonOk)
 
   const confirm = () => {
-    if (isOwner) return onCancelOwn()
+    if (isOwner) return onCancelOwn(scope)
     if (ended) return
     if (adminOverride) return onReleaseNow(reason.trim() || 'Cancelled by an administrator')
     if (choice === 'request') onRequestRelease(reason)
@@ -82,9 +86,35 @@ export function CancelDialog({
 
           <div className="space-y-3 px-5 py-4">
             {isOwner ? (
-              <p className="text-sm text-phantom-20">
-                This frees the {room?.name} room for the rest of the slot. This can't be undone.
-              </p>
+              isSeries ? (
+                <>
+                  <p className="text-sm text-phantom-20">This booking is part of a recurring series.</p>
+                  <div className="space-y-2">
+                    {(['one', 'series'] as const).map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => setScope(opt)}
+                        className={`flex w-full items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left text-sm transition ease-ks ${
+                          scope === opt ? 'border-keen/50 bg-keen/10 text-polar' : 'border-line bg-phantom-90 text-phantom-20 hover:border-line-strong'
+                        }`}
+                      >
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
+                            scope === opt ? 'border-keen' : 'border-phantom-40'
+                          }`}
+                        >
+                          {scope === opt && <span className="h-2 w-2 rounded-full bg-keen" />}
+                        </span>
+                        {opt === 'one' ? 'Just this booking' : `The whole series (${seriesCount} bookings)`}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-phantom-20">
+                  This frees the {room?.name} room for the rest of the slot. This can't be undone.
+                </p>
+              )
             ) : ended ? (
               <p className="flex items-start gap-2 rounded-lg border border-line bg-phantom-90 px-3 py-2.5 text-sm text-phantom-20">
                 <Clock size={15} className="mt-0.5 shrink-0 text-phantom-40" />
@@ -168,7 +198,9 @@ export function CancelDialog({
                 }`}
               >
                 {isOwner
-                  ? 'Cancel Booking'
+                  ? isSeries && scope === 'series'
+                    ? `Cancel ${seriesCount} Bookings`
+                    : 'Cancel Booking'
                   : adminOverride
                     ? 'Cancel as Admin'
                     : choice === 'release'

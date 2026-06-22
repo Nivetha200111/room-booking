@@ -35,7 +35,7 @@ export function Login() {
         transition={{ duration: 0.42, ease: [0.22, 0.61, 0.36, 1] }}
         className="relative w-full max-w-sm"
       >
-        <img src="/brand/logo-primary.png" alt="KeenStack" className="mb-10 h-9 w-auto" />
+        <img src="/brand/logo-primary.png" alt="KeenStack" className="mb-8 h-24 w-auto sm:h-28" />
 
         <h1 className="font-display text-3xl font-light tracking-tight text-polar">Meeting Rooms</h1>
         <p className="mt-2 text-sm text-phantom-20">

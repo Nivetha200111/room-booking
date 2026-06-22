@@ -29,10 +29,19 @@ export interface Booking {
   attendees: number
   /** optional list of attendee names */
   attendeeNames: string[]
+  /** id shared by all bookings created together as a recurring series */
+  seriesId?: string
   /** ISO strings */
   start: string
   end: string
   createdAt: string
+}
+
+export type RepeatMode = 'none' | 'weekdays' | 'daily' | 'weekly'
+
+export interface Occurrence {
+  start: string
+  end: string
 }
 
 export type Purpose =

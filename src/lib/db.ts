@@ -1,6 +1,7 @@
-import type { Booking, EmployeeRow, Inbox, ReleaseAction, ReleaseKind, Role, User } from '../types'
+import type { Booking, EmployeeRow, Inbox, Occurrence, ReleaseAction, ReleaseKind, Role, User } from '../types'
 import { useApi } from './config'
 import { validateEmployeeId } from './employee'
+import { overlaps } from './bookings'
 
 const EMPLOYEES_KEY = 'keenstack.employees.v1'
 
@@ -129,6 +130,56 @@ export async function deleteBooking(id: string): Promise<void> {
     return
   }
   writeLocal(readLocal().filter((b) => b.id !== id))
+}
+
+export interface SeriesResult {
+  created: Booking[]
+  skipped: Occurrence[]
+  seriesId: string
+}
+
+/** Create a recurring series in one request. Occurrences that clash are skipped. */
+export async function createSeries(
+  draft: Omit<Booking, 'id' | 'createdAt' | 'start' | 'end' | 'seriesId'>,
+  occurrences: Occurrence[],
+): Promise<SeriesResult> {
+  const seriesId = crypto.randomUUID()
+  if (useApi) {
+    return api<SeriesResult>('bookings', {
+      method: 'POST',
+      body: JSON.stringify({ ...draft, seriesId, occurrences }),
+    })
+  }
+  const all = readLocal()
+  const created: Booking[] = []
+  const skipped: Occurrence[] = []
+  for (const occ of occurrences) {
+    const clash =
+      all.some((b) => b.roomId === draft.roomId && overlaps(occ, b)) ||
+      created.some((b) => overlaps(occ, b))
+    if (clash) {
+      skipped.push(occ)
+      continue
+    }
+    created.push({
+      ...draft,
+      id: crypto.randomUUID(),
+      createdAt: new Date().toISOString(),
+      seriesId,
+      start: occ.start,
+      end: occ.end,
+    })
+  }
+  writeLocal([...all, ...created])
+  return { created, skipped, seriesId }
+}
+
+export async function deleteSeries(seriesId: string): Promise<void> {
+  if (useApi) {
+    await api(`bookings?seriesId=${encodeURIComponent(seriesId)}`, { method: 'DELETE' })
+    return
+  }
+  writeLocal(readLocal().filter((b) => b.seriesId !== seriesId))
 }
 
 // ---------- release actions (request release / release now) ----------
