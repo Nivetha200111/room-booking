@@ -10,15 +10,17 @@ const sameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString()
 export function WeekView({
   bookings,
   now,
+  initialOffset = 0,
   onCancel,
   onBookSlot,
 }: {
   bookings: Booking[]
   now: Date
+  initialOffset?: number
   onCancel: (booking: Booking) => void
   onBookSlot: (room: Room, start: Date) => void
 }) {
-  const [offset, setOffset] = useState(0) // weeks from current
+  const [offset, setOffset] = useState(initialOffset) // weeks from current
   const rooms = ROOMS.filter((r) => !r.restricted)
 
   const base = new Date(now)

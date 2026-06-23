@@ -20,7 +20,7 @@ import { WeekView } from './components/WeekView'
 import { PolicyDrawer } from './components/PolicyDrawer'
 
 type FloorFilter = 'all' | 1 | 2
-type ScheduleView = 'today' | 'week'
+type ScheduleView = 'today' | 'next-week'
 type Theme = 'dark' | 'light'
 
 const THEME_KEY = 'keenstack.theme.v1'
@@ -230,12 +230,12 @@ function Board({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => vo
         </div>
 
         {/* schedule */}
-        <div className="mt-8 mb-3 flex items-center justify-between">
+        <div className="mt-8 mb-3 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-display text-lg font-semibold text-polar">Schedule</h2>
           <div className="flex items-center gap-1 rounded-xl border border-line p-0.5">
             {([
-              ['today', 'Today'],
-              ['week', 'Week'],
+              ['today', "View today's bookings"],
+              ['next-week', "View next week's bookings"],
             ] as [ScheduleView, string][]).map(([val, label]) => (
               <button
                 key={val}
@@ -261,6 +261,7 @@ function Board({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => vo
           <WeekView
             bookings={bookings}
             now={now}
+            initialOffset={1}
             onCancel={setCancelTarget}
             onBookSlot={(room, start) => setBooking({ room, start })}
           />
