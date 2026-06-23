@@ -224,7 +224,7 @@ function Board({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => vo
             rooms={rooms}
             bookings={bookings}
             now={now}
-            onBook={(room) => setBooking({ room })}
+            onBook={(room, start) => setBooking({ room, start })}
             onCancel={setCancelTarget}
           />
         </div>

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Lock } from 'lucide-react'
+import { CalendarPlus, Lock } from 'lucide-react'
 import type { Booking, Floor, Room } from '../types'
 import { activeBooking, nextBooking, fmtTime } from '../lib/bookings'
 
@@ -11,6 +11,23 @@ const STATUS = {
 
 const TABLE = 'var(--room-table)'
 const CHAIR = 'var(--room-chair)'
+const DEFAULT_SLOT_MS = 30 * 60 * 1000
+
+function nextFreeStart(roomId: string, bookings: Booking[], from: Date) {
+  let candidate = new Date(from)
+  const future = bookings
+    .filter((b) => b.roomId === roomId && new Date(b.end) > candidate)
+    .sort((a, b) => +new Date(a.start) - +new Date(b.start))
+
+  for (const booking of future) {
+    const start = new Date(booking.start)
+    const end = new Date(booking.end)
+    if (end <= candidate) continue
+    if (+candidate + DEFAULT_SLOT_MS <= +start) break
+    candidate = end
+  }
+  return candidate
+}
 
 function Chairs({ n }: { n: number }) {
   return (
@@ -71,7 +88,7 @@ function RoomTile({
   room: Room
   bookings: Booking[]
   now: Date
-  onBook: (room: Room) => void
+  onBook: (room: Room, start?: Date) => void
   onCancel: (b: Booking) => void
 }) {
   const active = activeBooking(room.id, bookings, now)
@@ -81,6 +98,7 @@ function RoomTile({
   const seats = Math.min(room.capacity, 12)
   const top = Math.ceil(seats / 2)
   const bottom = seats - top
+  const futureStart = active ? nextFreeStart(room.id, bookings, new Date(active.end)) : undefined
 
   const handle = () => {
     if (room.restricted) return
@@ -89,36 +107,57 @@ function RoomTile({
   }
 
   return (
-    <motion.button
+    <motion.div
       layout
       initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-      onClick={handle}
-      disabled={room.restricted}
       style={{ background: s.floor, borderColor: s.wall, boxShadow: s.glow }}
-      className={`relative flex min-h-[168px] min-w-0 flex-col rounded-lg border-2 p-3 text-left transition ${
+      className={`group relative flex min-h-[168px] min-w-0 flex-col rounded-lg border-2 p-3 text-left transition ${
         room.restricted ? 'cursor-not-allowed' : 'hover:brightness-110 active:scale-[0.99]'
       }`}
     >
+      <button
+        type="button"
+        onClick={handle}
+        disabled={room.restricted}
+        aria-label={active ? `Manage the current ${room.name} booking` : `Book ${room.name}`}
+        className="absolute inset-0 z-10 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-codeblue disabled:cursor-not-allowed"
+      />
+
       {/* header */}
-      <div className="relative z-10 flex items-start justify-between">
-        <div>
-          <h4 className="font-display text-[15px] font-semibold leading-tight text-polar">{room.name}</h4>
+      <div className="pointer-events-none relative z-20 flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h4 className="truncate font-display text-[15px] font-semibold leading-tight text-polar">{room.name}</h4>
           <p className="text-[11px] text-phantom-40">Floor {room.floor}</p>
         </div>
-        <span
-          className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
-          style={{ color: s.label, background: `color-mix(in srgb, ${s.label} 14%, transparent)` }}
-        >
-          {status !== 'restricted' && (
-            <span className="relative flex h-1.5 w-1.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: s.label }} />
-              <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: s.label }} />
-            </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span
+            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+            style={{ color: s.label, background: `color-mix(in srgb, ${s.label} 14%, transparent)` }}
+          >
+            {status !== 'restricted' && (
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: s.label }} />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: s.label }} />
+              </span>
+            )}
+            {status === 'busy' ? 'In Use' : status === 'free' ? 'Open' : 'Locked'}
+          </span>
+          {active && futureStart && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onBook(room, futureStart)
+              }}
+              title={`Book ${room.name} from ${fmtTime(futureStart.toISOString())} or later`}
+              className="pointer-events-auto flex items-center gap-1 rounded-md border border-keen/40 bg-keen/10 px-2 py-1 text-[10px] font-bold text-keen transition hover:bg-keen/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-codeblue"
+            >
+              <CalendarPlus size={11} /> Book later
+            </button>
           )}
-          {status === 'busy' ? 'In Use' : status === 'free' ? 'Open' : 'Locked'}
-        </span>
+        </div>
       </div>
 
       {/* room interior: chairs · table · chairs */}
@@ -138,7 +177,7 @@ function RoomTile({
       </div>
 
       {/* status line */}
-      <div className="relative z-10 min-h-[16px] w-full min-w-0 overflow-hidden text-[11px]">
+      <div className="pointer-events-none relative z-20 min-h-[16px] w-full min-w-0 overflow-hidden text-[11px]">
         {room.restricted ? (
           <span className="text-phantom-40">Restricted area</span>
         ) : active ? (
@@ -154,7 +193,7 @@ function RoomTile({
 
       {/* door — open when free, closed when booked */}
       <Door status={status} />
-    </motion.button>
+    </motion.div>
   )
 }
 
@@ -168,7 +207,7 @@ export function FloorMap({
   rooms: Room[]
   bookings: Booking[]
   now: Date
-  onBook: (room: Room) => void
+  onBook: (room: Room, start?: Date) => void
   onCancel: (b: Booking) => void
 }) {
   const floors = [...new Set(rooms.map((r) => r.floor))].sort() as Floor[]
