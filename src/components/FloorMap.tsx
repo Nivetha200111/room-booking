@@ -97,7 +97,7 @@ function RoomTile({
       onClick={handle}
       disabled={room.restricted}
       style={{ background: s.floor, borderColor: s.wall, boxShadow: s.glow }}
-      className={`relative flex min-h-[168px] flex-col rounded-lg border-2 p-3 text-left transition ${
+      className={`relative flex min-h-[168px] min-w-0 flex-col rounded-lg border-2 p-3 text-left transition ${
         room.restricted ? 'cursor-not-allowed' : 'hover:brightness-110 active:scale-[0.99]'
       }`}
     >
@@ -138,11 +138,11 @@ function RoomTile({
       </div>
 
       {/* status line */}
-      <div className="relative z-10 min-h-[16px] text-[11px]">
+      <div className="relative z-10 min-h-[16px] w-full min-w-0 overflow-hidden text-[11px]">
         {room.restricted ? (
           <span className="text-phantom-40">Restricted area</span>
         ) : active ? (
-          <span className="truncate" style={{ color: s.label }}>
+          <span className="block w-full truncate" style={{ color: s.label }}>
             {active.agenda} · until {fmtTime(active.end)}
           </span>
         ) : next ? (
