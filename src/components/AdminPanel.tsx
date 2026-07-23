@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Download, CalendarDays, Users, DoorOpen, ShieldCheck } from 'lucide-react'
+import { X, Download, CalendarDays, Users, DoorOpen, ShieldCheck, UserPlus, Minus, Plus, Check, Loader2 } from 'lucide-react'
 import type { Booking, EmployeeRow, User } from '../types'
 import { ROOMS, getRoom } from '../rooms'
-import { fetchEmployees } from '../lib/db'
+import { fetchEmployees, updateMaxEmployeeNo } from '../lib/db'
 import { fmtTime } from '../lib/bookings'
 import { toCsv, downloadCsv, today } from '../lib/csv'
 
@@ -27,10 +27,18 @@ export function AdminPanel({
   onClose: () => void
 }) {
   const [employees, setEmployees] = useState<EmployeeRow[]>([])
+  const [maxEmployeeNo, setMaxEmployeeNo] = useState(72)
+  const [editMax, setEditMax] = useState<number | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
 
   useEffect(() => {
     fetchEmployees(user.employeeId)
-      .then(setEmployees)
+      .then((data) => {
+        setEmployees(data.employees)
+        setMaxEmployeeNo(data.maxEmployeeNo)
+      })
       .catch(() => setEmployees([]))
   }, [user.employeeId])
 
@@ -60,6 +68,24 @@ export function AdminPanel({
       purposes,
     }
   }, [bookings])
+
+  const handleSaveMax = async () => {
+    if (editMax === null || editMax === maxEmployeeNo) return
+    setSaving(true)
+    setSaveError(null)
+    setSaveSuccess(false)
+    try {
+      const updated = await updateMaxEmployeeNo(user.employeeId, editMax)
+      setMaxEmployeeNo(updated)
+      setEditMax(null)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 2500)
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Failed to update')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const exportBookings = () => {
     const rows = bookings.map((b) => ({
@@ -132,6 +158,82 @@ export function AdminPanel({
               <StatCard icon={<Users size={15} />} label="Employees" value={employees.length} />
               <StatCard icon={<DoorOpen size={15} />} label="Busiest room" value={stats.busiest} />
             </div>
+
+            {/* Employee Limit Control */}
+            <Section title="Employee Limit">
+              <div className="rounded-lg border border-line bg-phantom-90 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <p className="text-[13px] text-phantom-20">
+                      Maximum allowed Employee ID number. Increase this when new employees join to allow them to sign in.
+                    </p>
+                    <p className="mt-1 text-[12px] text-phantom-40">
+                      Currently: <span className="font-semibold text-polar tabular-nums">KSIN0001</span> – <span className="font-semibold text-polar tabular-nums">KSIN{String(maxEmployeeNo).padStart(4, '0')}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {editMax === null ? (
+                      <button
+                        onClick={() => setEditMax(maxEmployeeNo)}
+                        className="flex items-center gap-1.5 rounded-lg border border-line px-3 py-1.5 text-[13px] font-semibold text-phantom-20 transition hover:border-codeblue hover:text-codeblue"
+                      >
+                        <UserPlus size={14} /> Adjust Limit
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center rounded-lg border border-line-strong bg-panel">
+                          <button
+                            onClick={() => setEditMax(Math.max(1, editMax - 1))}
+                            className="rounded-l-lg p-1.5 text-phantom-40 transition hover:bg-phantom-90 hover:text-polar disabled:opacity-30"
+                            disabled={editMax <= 1}
+                          >
+                            <Minus size={14} />
+                          </button>
+                          <input
+                            type="number"
+                            value={editMax}
+                            onChange={(e) => {
+                              const v = Number(e.target.value)
+                              if (v >= 1 && v <= 9999) setEditMax(v)
+                            }}
+                            className="w-16 border-x border-line bg-transparent px-2 py-1 text-center text-[13px] font-semibold tabular-nums text-polar outline-none"
+                            min={1}
+                            max={9999}
+                          />
+                          <button
+                            onClick={() => setEditMax(Math.min(9999, editMax + 1))}
+                            className="rounded-r-lg p-1.5 text-phantom-40 transition hover:bg-phantom-90 hover:text-polar disabled:opacity-30"
+                            disabled={editMax >= 9999}
+                          >
+                            <Plus size={14} />
+                          </button>
+                        </div>
+                        <button
+                          onClick={handleSaveMax}
+                          disabled={saving || editMax === maxEmployeeNo}
+                          className="flex items-center gap-1.5 rounded-lg bg-codeblue px-3 py-1.5 text-[13px] font-bold text-white transition hover:bg-codeblue/80 disabled:opacity-50"
+                        >
+                          {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                          Save
+                        </button>
+                        <button
+                          onClick={() => { setEditMax(null); setSaveError(null) }}
+                          className="rounded-md p-1.5 text-phantom-40 transition hover:bg-phantom-90 hover:text-polar"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {saveError && (
+                  <p className="mt-2 text-[12px] font-medium text-red-400">{saveError}</p>
+                )}
+                {saveSuccess && (
+                  <p className="mt-2 text-[12px] font-medium text-green-400">✓ Employee limit updated successfully</p>
+                )}
+              </div>
+            </Section>
 
             {/* room utilization */}
             <Section title="Room utilization">

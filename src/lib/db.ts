@@ -1,6 +1,6 @@
 import type { Booking, EmployeeRow, Inbox, Occurrence, ReleaseAction, ReleaseKind, Role, User } from '../types'
 import { useApi } from './config'
-import { validateEmployeeId } from './employee'
+import { validateEmployeeId, setMaxEmployeeNo } from './employee'
 import { overlaps } from './bookings'
 
 const EMPLOYEES_KEY = 'keenstack.employees.v1'
@@ -64,15 +64,38 @@ export async function signIn(employeeId: string, name: string): Promise<User> {
   return { employeeId: id, name: cleanName, role }
 }
 
-/** Admin-only: list all registered employees. */
-export async function fetchEmployees(adminId: string): Promise<EmployeeRow[]> {
+/** Admin-only: list all registered employees and sync the max employee number. */
+export async function fetchEmployees(adminId: string): Promise<{ employees: EmployeeRow[]; maxEmployeeNo: number }> {
   if (useApi) {
-    return api<EmployeeRow[]>(`employees?adminId=${encodeURIComponent(adminId)}`)
+    const data = await api<{ employees: EmployeeRow[]; maxEmployeeNo: number }>(
+      `employees?adminId=${encodeURIComponent(adminId)}`,
+    )
+    // Sync the client-side max so validation stays in sync
+    setMaxEmployeeNo(data.maxEmployeeNo)
+    return data
   }
   const emps = readEmployees()
-  return Object.entries(emps)
+  const employees = Object.entries(emps)
     .map(([employeeId, v]) => ({ employeeId, name: v.name, role: v.role }))
     .sort((a, b) => a.employeeId.localeCompare(b.employeeId))
+  const maxEmployeeNo = Number(localStorage.getItem('keenstack.max_employee_no') || '72')
+  return { employees, maxEmployeeNo }
+}
+
+/** Admin-only: update the max employee number. */
+export async function updateMaxEmployeeNo(adminId: string, maxEmployeeNo: number): Promise<number> {
+  if (useApi) {
+    const data = await api<{ maxEmployeeNo: number }>('employees', {
+      method: 'PATCH',
+      body: JSON.stringify({ adminId, maxEmployeeNo }),
+    })
+    setMaxEmployeeNo(data.maxEmployeeNo)
+    return data.maxEmployeeNo
+  }
+  // local fallback
+  localStorage.setItem('keenstack.max_employee_no', String(maxEmployeeNo))
+  setMaxEmployeeNo(maxEmployeeNo)
+  return maxEmployeeNo
 }
 
 function localAdminIds(): string[] {
