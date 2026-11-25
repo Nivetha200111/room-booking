@@ -1,6 +1,6 @@
 import type { Booking, EmployeeRow, Inbox, Occurrence, ReleaseAction, ReleaseKind, Role, User } from '../types'
 import { useApi } from './config'
-import { validateEmployeeId, setMaxEmployeeNo } from './employee'
+import { validateEmployeeId, validateEmployeeIdFormat, setMaxEmployeeNo } from './employee'
 import { overlaps } from './bookings'
 
 const EMPLOYEES_KEY = 'keenstack.employees.v1'
@@ -37,7 +37,14 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 // once (the name is bound on first sign-in). Admins are designated by env.
 
 export async function signIn(employeeId: string, name: string): Promise<User> {
-  const check = validateEmployeeId(employeeId)
+  // In API mode the server owns the allowed ID range (admins can raise it), so
+  // only check the format here. Local mode has no server, so check the range
+  // against the locally stored limit.
+  if (!useApi) {
+    const localMax = Number(localStorage.getItem('keenstack.max_employee_no') || '')
+    if (localMax > 0) setMaxEmployeeNo(localMax)
+  }
+  const check = useApi ? validateEmployeeIdFormat(employeeId) : validateEmployeeId(employeeId)
   if (!check.ok) throw new Error(check.error)
   const id = check.id!
   const cleanName = name.trim()

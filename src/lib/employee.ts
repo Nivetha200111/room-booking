@@ -17,6 +17,19 @@ export interface IdCheck {
   error?: string
 }
 
+/**
+ * Format-only check (KSIN + 4 digits). The allowed number range is owned by the
+ * server (admins can raise it at runtime), so the login screen must not block
+ * on a stale client-side limit.
+ */
+export function validateEmployeeIdFormat(raw: string): IdCheck {
+  const id = normalizeEmployeeId(raw)
+  if (!EMPLOYEE_ID_RE.test(id) || Number(id.slice(4)) < 1) {
+    return { ok: false, error: 'Employee ID must look like KSIN0042 (KSIN followed by 4 digits).' }
+  }
+  return { ok: true, id }
+}
+
 export function validateEmployeeId(raw: string): IdCheck {
   const id = normalizeEmployeeId(raw)
   const maxNo = getMaxEmployeeNo()

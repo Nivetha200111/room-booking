@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { AlertTriangle, ArrowRight } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
-import { validateEmployeeId } from '../lib/employee'
+import { validateEmployeeIdFormat } from '../lib/employee'
 
 export function Login() {
   const { signIn, loading } = useAuth()
@@ -10,7 +10,7 @@ export function Login() {
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
 
-  const idCheck = validateEmployeeId(employeeId)
+  const idCheck = validateEmployeeIdFormat(employeeId)
   const valid = idCheck.ok && name.trim().length >= 2
 
   const submit = async (e: React.FormEvent) => {
